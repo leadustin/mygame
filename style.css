@@ -1,0 +1,94 @@
+/* Globale Stile und Variablen */
+:root {
+    --bg-color: #1a1a1a;
+    --text-color: #e0e0e0;
+    --border-color: #444;
+    --ui-bg-color: #2a2a2a;
+    --highlight-color: #a0c4ff;
+    --button-bg: #3c3c3c;
+    --button-hover-bg: #555;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#game-container {
+    width: 1024px;
+    height: 768px;
+    border: 2px solid var(--border-color);
+    background-color: var(--ui-bg-color);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+
+/* UI-Fenster (Inventar, Charakter, etc.) */
+.window {
+    position: absolute;
+    background-color: rgba(30, 30, 30, 0.9);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    display: none; /* Standardmäßig ausgeblendet */
+    z-index: 10;
+}
+
+.window.active {
+    display: block;
+}
+
+/* Log-Fenster für Spielnachrichten */
+#log-window {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    width: 50%;
+    height: 150px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid var(--border-color);
+    overflow-y: scroll;
+    padding: 10px;
+    font-size: 0.9em;
+}
+
+#log-window .log-message {
+    margin-bottom: 5px;
+}
+
+/* Stile für das Kampffenster */
+#combat-screen {
+    padding: 20px;
+}
+
+#combat-screen .monster-area, #combat-screen .player-area {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#combat-screen .actions button {
+    margin: 5px;
+}
+
+/* Einfache Buttons */
+button {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: var(--button-hover-bg);
+}
