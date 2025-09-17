@@ -1,111 +1,177 @@
 /**
  * engine.js
  * * Haupt-Einstiegspunkt des Spiels.
- * Initialisiert alle Kernsysteme, lädt die Spieldaten und startet die Haupt-Game-Loop.
  */
 import StateManager from './state_manager.js';
-import EventBus from './event_bus.js';
+import { eventBus } from './state_manager.js';
 import { RenderSystem } from '../systems/render.js';
 import { InputSystem } from '../systems/input.js';
+import { UIManager } from '../../game/ui/menu.js';
+import { CharacterCreator } from '../../game/characters/character_creation.js';
+import { CombatSystem } from '../gameplay/combat_system.js';
+import { InventorySystem } from '../../game/systems/inventory/inventory.js';
+import { SaveSystem } from '../systems/save.js';
 
 // Daten importieren
-import { CLASSES } from '../../game/characters/classes.js';
-import { WEAPONS } from '../../data/items/weapons.js';
-import { COMMON_MONSTERS } from '../../data/monsters/common.js';
 import { TOWNS } from '../../data/locations/towns.js';
+import { DUNGEONS } from '../../data/locations/dungeons.js';
+import { CLASSES } from '../../game/characters/classes.js';
+
 
 class GameEngine {
     constructor() {
         this.stateManager = new StateManager();
-        this.eventBus = new EventBus();
         this.renderSystem = new RenderSystem();
-        this.inputSystem = new InputSystem(this.eventBus);
+        this.inputSystem = new InputSystem();
+        this.uiManager = new UIManager(this.stateManager);
+        this.combatSystem = new CombatSystem();
         
         this.lastTime = 0;
         this.gameLoop = this.gameLoop.bind(this);
     }
 
-    /**
-     * Initialisiert die Engine und das Spiel.
-     */
     init() {
         console.log("Engine initialisiert...");
 
-        // Registriert Systeme beim EventBus, damit sie auf Events hören können
-        this.eventBus.subscribe('state:updated', (state) => this.renderSystem.render(state));
+        // Alle globalen Events abonnieren
+        eventBus.subscribe('state:updated', (state) => this.renderSystem.render(state));
+        eventBus.subscribe('ui:startGame', (characterData) => this.startGame(characterData));
+        eventBus.subscribe('game:startCombat', () => this.startCombat());
+        eventBus.subscribe('combat:action', (action) => this.handleCombatAction(action));
+        eventBus.subscribe('inventory:use', (item) => this.useItem(item));
+        eventBus.subscribe('inventory:equip', (item) => this.equipItem(item));
+        eventBus.subscribe('game:save', () => this.saveGame());
+        eventBus.subscribe('game:load', () => this.loadGame());
         
-        // Initialen Spielzustand setzen (Dummy-Daten für den Start)
-        this.setupInitialState();
+        // Startlogik: Lade Spielstand oder starte neu
+        if (SaveSystem.saveExists()) {
+            this.loadGame();
+        } else {
+            this.setupInitialState();
+        }
         
-        // Input-Handler initialisieren
         this.inputSystem.init();
-
-        // Spiel-Loop starten
         requestAnimationFrame(this.gameLoop);
     }
 
     /**
-     * Setzt den anfänglichen Zustand des Spiels auf.
-     * Normalerweise würde hier ein Charaktererstellungs- oder Ladebildschirm kommen.
-     * Wir erstellen hier direkt einen Dummy-Spieler, um schnell starten zu können.
+     * Setzt den anfänglichen Zustand auf den Charaktererstellungs-Bildschirm.
      */
     setupInitialState() {
-        const player = {
-            id: 'player',
-            name: 'Held',
-            class: CLASSES.WARRIOR.name,
-            level: 1,
-            hp: 100,
-            maxHp: 100,
-            mp: 50,
-            maxMp: 50,
-            stats: {
-                strength: 15,
-                dexterity: 12,
-                intelligence: 8,
-            },
-            inventory: [WEAPONS.RUSTY_SWORD],
-            equipment: {
-                weapon: WEAPONS.RUSTY_SWORD,
-            },
-        };
-
         const initialGameState = {
-            player: player,
-            party: [player],
-            currentLocation: TOWNS.STARTING_TOWN,
-            activeWindows: [], // Keine Fenster sind zu Beginn offen
-            currentView: 'map', // 'map', 'combat', 'inventory', etc.
-            log: ['Willkommen in der Welt!'],
-            combat: null, // Kein Kampf aktiv zu Beginn
+            currentView: 'character_creation',
+            creationData: { availableClasses: CLASSES },
+            player: null,
+            party: [],
+            log: ['Bitte erstelle deinen Charakter.'],
         };
-
         this.stateManager.setState(initialGameState);
-        console.log("Initialer Spielzustand gesetzt:", this.stateManager.getState());
     }
 
     /**
-     * Die Haupt-Game-Loop.
-     * @param {number} timestamp - Der aktuelle Zeitstempel vom Browser.
+     * Wird aufgerufen, nachdem der Spieler seinen Charakter erstellt hat.
      */
+    startGame(characterData) {
+        const player = CharacterCreator.createCharacter(characterData);
+
+        const newGameState = {
+            ...this.stateManager.getState(),
+            currentView: 'map',
+            player: player,
+            party: [player],
+            currentLocation: TOWNS.STARTING_TOWN,
+            activeWindows: [],
+            log: [`Willkommen, ${player.name}! Dein Abenteuer beginnt.`],
+        };
+
+        this.stateManager.setState(newGameState);
+        console.log("Spiel gestartet mit Spieler:", player);
+    }
+
+    /**
+     * Startet einen neuen Kampf.
+     */
+    startCombat() {
+        const dungeon = DUNGEONS.GOBLIN_CAVE;
+        const monsterData = dungeon.monsters[Math.floor(Math.random() * dungeon.monsters.length)];
+        const monster = JSON.parse(JSON.stringify(monsterData));
+
+        const state = this.stateManager.getState();
+        const newState = {
+            ...state,
+            currentView: 'combat',
+            combat: {
+                monster: monster,
+                turn: 'player',
+            },
+            log: [...state.log, `Ein wilder ${monster.name} erscheint!`],
+        };
+        this.stateManager.setState(newState);
+    }
+
+    /**
+     * Verarbeitet eine Aktion im Kampf.
+     */
+    handleCombatAction(action) {
+        const currentState = this.stateManager.getState();
+        const { updatedState, log } = this.combatSystem.performAction(currentState, action);
+        
+        updatedState.log = [...currentState.log, ...log];
+        this.stateManager.setState(updatedState);
+    }
+    
+    /**
+     * Benutzt einen Gegenstand aus dem Inventar.
+     */
+    useItem(item) {
+        const state = this.stateManager.getState();
+        const { player, log } = InventorySystem.useItem(state.player, item);
+        const newState = { ...state, player, log: [...state.log, log] };
+        this.stateManager.setState(newState);
+    }
+
+    /**
+     * Rüstet einen Gegenstand aus.
+     */
+    equipItem(item) {
+        const state = this.stateManager.getState();
+        const { player, log } = InventorySystem.equipItem(state.player, item);
+        const newState = { ...state, player, log: [...state.log, log] };
+        this.stateManager.setState(newState);
+    }
+
+    /**
+     * Speichert das aktuelle Spiel.
+     */
+    saveGame() {
+        const state = this.stateManager.getState();
+        if (SaveSystem.saveGame(state)) {
+            const newLog = [...state.log, "Spiel gespeichert."];
+            this.stateManager.updateState('log', newLog);
+        }
+    }
+
+    /**
+     * Lädt das Spiel.
+     */
+    loadGame() {
+        const loadedState = SaveSystem.loadGame();
+        if (loadedState) {
+            this.stateManager.setState(loadedState);
+            const newLog = [...loadedState.log, "Spiel geladen."];
+            this.stateManager.updateState('log', newLog);
+        }
+    }
+
     gameLoop(timestamp) {
         const deltaTime = (timestamp - this.lastTime) / 1000;
         this.lastTime = timestamp;
-
-        // 1. Update-Logik (z.B. KI, Animationen, Zeit)
-        // update(deltaTime);
-
-        // 2. Rendern (wird jetzt ereignisbasiert durch state:updated ausgelöst)
-        // this.renderSystem.render(this.stateManager.getState());
-
         requestAnimationFrame(this.gameLoop);
     }
 }
 
-// Sobald das DOM geladen ist, wird die Engine instanziiert und gestartet.
 window.addEventListener('DOMContentLoaded', () => {
     const engine = new GameEngine();
-    // Machen Sie die Engine global zugänglich für Debugging-Zwecke (optional)
     window.gameEngine = engine; 
     engine.init();
 });

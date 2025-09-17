@@ -92,3 +92,73 @@ button {
 button:hover {
     background-color: var(--button-hover-bg);
 }
+
+/* Charakter-Fenster */
+.stat-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.stat-line span:first-child {
+    font-weight: bold;
+}
+
+/* Inventar-Fenster */
+#inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 64px); /* 8 Spalten */
+    grid-gap: 8px;
+    margin-top: 15px;
+}
+
+.inventory-slot {
+    width: 64px;
+    height: 64px;
+    background-color: var(--button-bg);
+    border: 1px solid var(--border-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.8em;
+    position: relative;
+    cursor: pointer;
+}
+
+.inventory-slot:hover {
+    background-color: var(--button-hover-bg);
+    border-color: var(--highlight-color);
+}
+
+.inventory-item {
+    /* Später für Item-Bilder */
+    text-align: center;
+}
+
+.item-stack-size {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000;
+}
+
+#context-menu {
+    position: absolute;
+    z-index: 1000;
+    background-color: var(--button-bg);
+    border: 1px solid var(--border-color);
+    padding: 5px;
+    display: none; /* Wird per JS sichtbar gemacht */
+}
+
+.context-menu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.context-menu-item:hover {
+    background-color: var(--button-hover-bg);
+}

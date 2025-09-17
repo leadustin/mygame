@@ -9,6 +9,7 @@ export const COMMON_MONSTERS = {
         name: 'Goblin',
         type: 'common',
         level: 1,
+        xpValue: 25,
         hp: 30,
         maxHp: 30,
         stats: {
@@ -22,6 +23,7 @@ export const COMMON_MONSTERS = {
         name: 'Riesenratte',
         type: 'common',
         level: 1,
+        xpValue: 15,
         hp: 20,
         maxHp: 20,
         stats: {
