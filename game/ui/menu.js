@@ -1,21 +1,16 @@
-/**
- * menu.js
- * * Verwaltet das Öffnen und Schließen von UI-Fenstern (Inventar, Charakter, Karte etc.).
- * Hört auf Input-Events und aktualisiert den globalen Spielzustand entsprechend.
- */
 import { eventBus } from '../../engine/core/state_manager.js';
 
 export class UIManager {
     constructor(stateManager) {
         this.stateManager = stateManager;
-        this.initEventListeners();
     }
 
+    // Die Event-Listener sind zurück, aber lauschen auf neue "ui:" Events
     initEventListeners() {
-        eventBus.subscribe('input:toggleInventory', () => this.toggleWindow('inventory'));
-        eventBus.subscribe('input:toggleCharacter', () => this.toggleWindow('character'));
-        eventBus.subscribe('input:toggleMap', () => this.toggleWindow('map'));
-        eventBus.subscribe('input:closeAllWindows', () => this.closeAllWindows());
+        eventBus.subscribe('ui:toggleInventory', () => this.toggleWindow('inventory'));
+        eventBus.subscribe('ui:toggleCharacter', () => this.toggleWindow('character'));
+        eventBus.subscribe('ui:toggleMap', () => this.toggleWindow('map'));
+        eventBus.subscribe('ui:closeAllWindows', () => this.closeAllWindows());
     }
 
     toggleWindow(windowName) {

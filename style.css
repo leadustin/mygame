@@ -1,18 +1,27 @@
-/* Globale Stile und Variablen */
+/* Import einer passenden Google Font (erfordert Internetverbindung) */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+
+/* --- BG3-inspirierte Farbpalette und Basis-Setup --- */
 :root {
-    --bg-color: #1a1a1a;
-    --text-color: #e0e0e0;
-    --border-color: #444;
-    --ui-bg-color: #2a2a2a;
-    --highlight-color: #a0c4ff;
-    --button-bg: #3c3c3c;
-    --button-hover-bg: #555;
+    --bg-color: #1a1917;
+    --ui-bg-color: #312a23;
+    --text-color: #dcd3c1;
+    --header-color: #c7a46e;
+    --border-color: #5c4b38;
+    --highlight-color: #fce8a8;
+    --button-bg: linear-gradient(to bottom, #6d5b43, #544532);
+    --button-hover-bg: linear-gradient(to bottom, #8a7356, #6d5b43);
+    --disabled-bg: #3a3a3a;
+    --disabled-text: #777;
+
+    --font-primary: 'Cinzel', serif;
 }
 
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: Arial, sans-serif; /* Fallback-Schriftart */
+    font-family: var(--font-primary); /* Haupt-Schriftart */
     margin: 0;
     padding: 20px;
     display: flex;
@@ -26,20 +35,59 @@ body {
     height: 768px;
     border: 2px solid var(--border-color);
     background-color: var(--ui-bg-color);
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0,0,0,0.5);
     position: relative;
     overflow: hidden;
+    background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)); /* Leichte Textur */
 }
 
-/* UI-Fenster (Inventar, Charakter, etc.) */
+/* --- Allgemeine UI-Elemente --- */
+h1, h2, h3, h4 {
+    color: var(--header-color);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    font-weight: 700;
+}
+
+button {
+    background: var(--button-bg);
+    color: var(--highlight-color);
+    border: 1px solid var(--border-color);
+    border-top-color: #8a7356; /* Hellerer Rand oben für 3D-Effekt */
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--font-primary);
+    font-size: 1em;
+    text-shadow: 1px 1px 1px #000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+}
+
+button:hover {
+    background: var(--button-hover-bg);
+    border-color: var(--highlight-color);
+    color: #fff;
+}
+
+button:disabled {
+    background: var(--disabled-bg);
+    color: var(--disabled-text);
+    cursor: not-allowed;
+    border-color: #444;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+
+/* --- Fenster-Styling --- */
 .window {
     position: absolute;
-    background-color: rgba(30, 30, 30, 0.9);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+    background-color: #2b241e;
+    border: 1px solid #111;
+    border-top-color: var(--border-color);
+    border-radius: 3px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7), inset 0 0 5px rgba(0,0,0,0.5);
     padding: 15px;
-    display: none; /* Standardmäßig ausgeblendet */
+    display: none;
     z-index: 10;
 }
 
@@ -47,67 +95,78 @@ body {
     display: block;
 }
 
-/* Log-Fenster für Spielnachrichten */
-#log-window {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    width: 50%;
-    height: 150px;
-    background: rgba(0,0,0,0.6);
-    border: 1px solid var(--border-color);
-    overflow-y: scroll;
-    padding: 10px;
-    font-size: 0.9em;
-}
-
-#log-window .log-message {
-    margin-bottom: 5px;
-}
-
-/* Stile für das Kampffenster */
-#combat-screen {
-    padding: 20px;
-}
-
-#combat-screen .monster-area, #combat-screen .player-area {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-#combat-screen .actions button {
-    margin: 5px;
-}
-
-/* Einfache Buttons */
-button {
-    background-color: var(--button-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    padding: 10px 15px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-button:hover {
-    background-color: var(--button-hover-bg);
-}
-
-/* Charakter-Fenster */
 .stat-line {
     display: flex;
     justify-content: space-between;
-    padding: 4px 0;
-    border-bottom: 1px solid var(--border-color);
+    padding: 5px 0;
+    border-bottom: 1px solid #4a3f33;
 }
 .stat-line span:first-child {
     font-weight: bold;
+    color: var(--header-color);
 }
 
-/* Inventar-Fenster */
+hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 10px 0;
+}
+
+
+/* --- Spezifische Fenster --- */
+#log-window {
+    position: absolute;
+    top: 600px; /* Ein Startwert, damit es unten auf dem Bildschirm beginnt */
+    left: 10px;
+    width: 20%;
+    height: 150px;
+    background: rgba(10, 5, 0, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    font-size: 0.9em;
+    resize: both;
+    overflow: auto;
+    min-width: 200px;
+    min-height: 100px;
+}
+
+.draggable-window {
+    display: flex;
+    flex-direction: column; /* Damit der Header über dem Inhalt steht */
+}
+
+.window-header {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 5px 10px;
+    cursor: move; /* Ändert den Mauszeiger, um Beweglichkeit zu signalisieren */
+    border-bottom: 1px solid var(--border-color);
+    user-select: none; /* Verhindert das Markieren von Text beim Ziehen */
+}
+
+#context-menu {
+    position: absolute;
+    z-index: 1000;
+    background-color: var(--ui-bg-color);
+    border: 1px solid var(--border-color);
+    padding: 5px;
+    display: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.context-menu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.context-menu-item:hover {
+    background-color: #8a7356;
+    color: #fff;
+}
+
 #inventory-grid {
     display: grid;
-    grid-template-columns: repeat(8, 64px); /* 8 Spalten */
+    grid-template-columns: repeat(8, 64px);
     grid-gap: 8px;
     margin-top: 15px;
 }
@@ -115,50 +174,211 @@ button:hover {
 .inventory-slot {
     width: 64px;
     height: 64px;
-    background-color: var(--button-bg);
-    border: 1px solid var(--border-color);
+    background-color: #1a1917;
+    border: 1px solid #111;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 0.8em;
     position: relative;
     cursor: pointer;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.7);
 }
 
 .inventory-slot:hover {
-    background-color: var(--button-hover-bg);
     border-color: var(--highlight-color);
 }
 
-.inventory-item {
-    /* Später für Item-Bilder */
+
+/* --- Titelscreen --- */
+#title-screen-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
     text-align: center;
 }
 
-.item-stack-size {
-    position: absolute;
-    bottom: 2px;
-    right: 4px;
-    font-size: 0.9em;
+#title-screen-container h1 {
+    font-size: 4.5em;
+    margin-bottom: 50px;
+    color: var(--header-color);
+    text-shadow: 3px 3px 8px #000;
+}
+
+#title-menu button {
+    display: block;
+    width: 250px;
+    margin: 15px auto;
+    font-size: 1.3em;
+    padding: 12px;
+}
+
+/* --- Charaktererstellung (Wizard-Layout) --- */
+#cc-wizard-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 20px 30px;
+    box-sizing: border-box;
+}
+
+#cc-step-indicator {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+.step {
+    color: var(--disabled-text);
+    font-size: 1.1em;
+}
+
+.step.active {
+    color: var(--highlight-color);
     font-weight: bold;
+}
+
+#cc-content-panel {
+    flex-grow: 1;
+    display: flex;
+    gap: 30px;
+    overflow-y: auto; /* Wichtig für Inhalte */
+}
+
+#cc-selection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-right: 2px solid var(--border-color);
+    padding-right: 30px;
+    min-width: 200px; /* Feste Breite für die Liste */
+}
+
+.selection-button {
+    width: 200px;
+    text-align: left;
+    padding: 15px;
+    font-size: 1.1em;
+}
+
+.selection-button.active {
+    background: var(--button-hover-bg);
+    border-color: var(--highlight-color);
     color: #fff;
-    text-shadow: 1px 1px 2px #000;
 }
 
-#context-menu {
-    position: absolute;
-    z-index: 1000;
-    background-color: var(--button-bg);
+#cc-details-panel {
+    flex-grow: 1;
+}
+
+#cc-details-panel .details-portrait {
+    width: 150px;
+    height: 150px;
+    background-color: #000;
+    border: 2px solid var(--border-color);
+    margin-bottom: 20px;
+    float: right;
+    margin-left: 20px;
+}
+
+#cc-details-panel .details-description {
+    text-align: justify;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+#cc-nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 20px;
+    margin-top: auto; /* Drückt die Buttons nach unten */
+    border-top: 2px solid var(--border-color);
+}
+
+#cc-nav-buttons button {
+    width: 200px;
+    padding: 12px;
+    font-size: 1.2em;
+}
+
+/* Spezifische Stile für finale Schritte */
+#cc-finalization-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+#cc-finalization-panel input {
+    font-family: var(--font-primary);
+    background-color: var(--bg-color);
+    color: var(--text-color);
     border: 1px solid var(--border-color);
-    padding: 5px;
-    display: none; /* Wird per JS sichtbar gemacht */
+    padding: 12px;
+    font-size: 1.1em;
+    width: 400px;
+    text-align: center;
 }
 
-.context-menu-item {
-    padding: 8px 12px;
-    cursor: pointer;
+.cc-item-icons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
 }
 
-.context-menu-item:hover {
-    background-color: var(--button-hover-bg);
+.cc-item-icons img {
+    width: 48px;
+    height: 48px;
+    background-color: #000;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    cursor: help; /* Zeigt an, dass es hier mehr Infos gibt */
 }
+/* --- Ende der Charaktererstellung --- */
+
+/* Das globale Tooltip-Element */
+#tooltip {
+    position: fixed; /* Fixed, damit es über allem schwebt */
+    z-index: 9999;
+    background-color: var(--ui-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 15px;
+    width: 250px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.7);
+    pointer-events: none; /* Sorgt dafür, dass die Maus "durch" den Tooltip klickt */
+}
+
+#tooltip h3 {
+    margin-top: 0;
+    color: var(--highlight-color);
+}
+/* --- Ende der Tooltip-Stile --- */
+
+/* --- HUD (Heads-Up Display) --- */
+#hud-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-top: 2px solid var(--border-color);
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.hud-button {
+    width: 120px;
+    padding: 8px;
+    font-size: 1em;
+}
+/* --- Ende des HUD --- */

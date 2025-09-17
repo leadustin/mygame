@@ -1,56 +1,71 @@
 /**
  * character_creation.js
- * * Enthält die Logik zur Erstellung eines neuen Spielercharakters. (Korrigierte Version)
+ * * Enthält die Logik zur Erstellung eines neuen Spielercharakters.
  */
 import { CLASSES } from './classes.js';
+import { RACES } from './races.js'; // NEU: Rassen importieren
 import { WEAPONS } from '../../data/items/weapons.js';
 import { ARMOR } from '../../data/items/armor.js';
 
-// Kombiniere alle Item-Daten in einem durchsuchbaren Katalog.
 const ALL_ITEMS = { ...WEAPONS, ...ARMOR };
 
 export class CharacterCreator {
     /**
      * Erstellt ein neues Charakterobjekt basierend auf den übergebenen Optionen.
-     * @param {object} options - Enthält name, classId etc.
+     * @param {object} options - Enthält name, raceId, classId, gender etc.
      * @returns {object} Das fertige Spielerobjekt.
      */
-    static createCharacter({ name, classId }) {
-        const characterClass = CLASSES[classId];
-        if (!characterClass) {
-            throw new Error(`Klasse mit ID ${classId} nicht gefunden.`);
+    static createCharacter({ name, raceId, classId, gender }) {
+        const classData = CLASSES[classId];
+        const raceData = RACES[raceId];
+
+        if (!classData || !raceData) {
+            throw new Error(`Rasse oder Klasse nicht gefunden: ${raceId}, ${classId}`);
+        }
+
+        // --- NEUE STAT-BERECHNUNG ---
+        // 1. Basiswerte der Klasse als Grundlage nehmen
+        const finalStats = { ...classData.baseStats };
+
+        // 2. Rassen-Modifikatoren anwenden
+        for (const stat in raceData.statModifiers) {
+            if (finalStats[stat]) {
+                finalStats[stat] += raceData.statModifiers[stat];
+            } else {
+                finalStats[stat] = raceData.statModifiers[stat];
+            }
         }
 
         const player = {
             id: `player_${new Date().getTime()}`,
             name: name || 'Abenteurer',
-            class: characterClass.name,
+            race: raceData.name, // Rasse speichern
+            raceId: raceId,
+            class: classData.name, // Klasse speichern
             classId: classId,
+            gender: gender || 'Nicht festgelegt',
             level: 1,
             xp: 0,
-            hp: characterClass.baseStats.vitality * 10,
-            maxHp: characterClass.baseStats.vitality * 10,
-            mp: characterClass.baseStats.intelligence * 10,
-            maxMp: characterClass.baseStats.intelligence * 10,
-            stats: { ...characterClass.baseStats },
+            // HP/MP basieren auf den finalen Attributen
+            hp: finalStats.vitality * 10,
+            maxHp: finalStats.vitality * 10,
+            mp: finalStats.intelligence * 10,
+            maxMp: finalStats.intelligence * 10,
+            stats: finalStats, // Finale, kombinierte Attribute
             inventory: [],
             equipment: {},
+            spellbook: []
         };
 
-        // Startausrüstung hinzufügen
-        if (characterClass.startEquipment) {
-            // Wir iterieren über die IDs in der Startausrüstung
-            Object.values(characterClass.startEquipment).forEach(itemId => {
-                
-                // KORRIGIERTE LOGIK: Finde das Item, dessen 'id'-Eigenschaft mit der gesuchten itemId übereinstimmt.
-                const item = Object.values(ALL_ITEMS).find(i => i.id === itemId);
+        if (classData.spellbook) {
+            player.spellbook = classData.spellbook;
+        }
 
+        if (classData.startEquipment) {
+            Object.values(classData.startEquipment).forEach(itemId => {
+                const item = Object.values(ALL_ITEMS).find(i => i.id === itemId);
                 if (item) {
-                    console.log(`Item gefunden und hinzugefügt: ${item.name}`);
-                    // Wichtig: Wir pushen eine Kopie des Items, damit Originaldaten nicht verändert werden.
                     player.inventory.push({ ...item }); 
-                } else {
-                    console.warn(`Start-Item mit ID '${itemId}' wurde nicht im Item-Katalog gefunden!`);
                 }
             });
         }

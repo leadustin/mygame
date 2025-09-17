@@ -4,6 +4,7 @@ export const POTIONS = {
         name: 'Kleiner Heiltrank',
         type: 'potion',
         rarity: 'common',
+        icon: 'assets/images/items/placeholder_potion.webp', // Korrigiert
         value: 10,
         stackable: true,
         effect: {

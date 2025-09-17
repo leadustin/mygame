@@ -5,12 +5,12 @@
 import StateManager from './state_manager.js';
 import { eventBus } from './state_manager.js';
 import { RenderSystem } from '../systems/render.js';
-import { InputSystem } from '../systems/input.js';
 import { UIManager } from '../../game/ui/menu.js';
 import { CharacterCreator } from '../../game/characters/character_creation.js';
 import { CombatSystem } from '../gameplay/combat_system.js';
 import { InventorySystem } from '../../game/systems/inventory/inventory.js';
 import { SaveSystem } from '../systems/save.js';
+import { TooltipSystem } from '../../game/ui/tooltips.js';
 
 // Daten importieren
 import { TOWNS } from '../../data/locations/towns.js';
@@ -22,9 +22,9 @@ class GameEngine {
     constructor() {
         this.stateManager = new StateManager();
         this.renderSystem = new RenderSystem();
-        this.inputSystem = new InputSystem();
         this.uiManager = new UIManager(this.stateManager);
         this.combatSystem = new CombatSystem();
+        this.tooltipSystem = new TooltipSystem();
         
         this.lastTime = 0;
         this.gameLoop = this.gameLoop.bind(this);
@@ -42,20 +42,29 @@ class GameEngine {
         eventBus.subscribe('inventory:equip', (item) => this.equipItem(item));
         eventBus.subscribe('game:save', () => this.saveGame());
         eventBus.subscribe('game:load', () => this.loadGame());
+        eventBus.subscribe('ui:newGame', () => this.setupInitialState());
         
-        // Startlogik: Lade Spielstand oder starte neu
-        if (SaveSystem.saveExists()) {
-            this.loadGame();
-        } else {
-            this.setupInitialState();
-        }
+        // Startlogik: Immer mit dem Titelscreen beginnen.
+        this.showTitleScreen();
         
-        this.inputSystem.init();
+        this.uiManager.initEventListeners();
+        this.tooltipSystem.init();
         requestAnimationFrame(this.gameLoop);
     }
 
     /**
-     * Setzt den anfänglichen Zustand auf den Charaktererstellungs-Bildschirm.
+     * Setzt den initialen Zustand auf den Titelbildschirm.
+     */
+    showTitleScreen() {
+        const initialState = {
+            currentView: 'title_screen',
+            log: [],
+        };
+        this.stateManager.setState(initialState);
+    }
+
+    /**
+     * Setzt den Zustand für die Charaktererstellung (wird von "Neues Spiel" aufgerufen).
      */
     setupInitialState() {
         const initialGameState = {
@@ -73,9 +82,7 @@ class GameEngine {
      */
     startGame(characterData) {
         const player = CharacterCreator.createCharacter(characterData);
-
         const newGameState = {
-            ...this.stateManager.getState(),
             currentView: 'map',
             player: player,
             party: [player],
@@ -83,9 +90,7 @@ class GameEngine {
             activeWindows: [],
             log: [`Willkommen, ${player.name}! Dein Abenteuer beginnt.`],
         };
-
         this.stateManager.setState(newGameState);
-        console.log("Spiel gestartet mit Spieler:", player);
     }
 
     /**
@@ -95,15 +100,11 @@ class GameEngine {
         const dungeon = DUNGEONS.GOBLIN_CAVE;
         const monsterData = dungeon.monsters[Math.floor(Math.random() * dungeon.monsters.length)];
         const monster = JSON.parse(JSON.stringify(monsterData));
-
         const state = this.stateManager.getState();
         const newState = {
             ...state,
             currentView: 'combat',
-            combat: {
-                monster: monster,
-                turn: 'player',
-            },
+            combat: { monster: monster, turn: 'player' },
             log: [...state.log, `Ein wilder ${monster.name} erscheint!`],
         };
         this.stateManager.setState(newState);
@@ -115,7 +116,6 @@ class GameEngine {
     handleCombatAction(action) {
         const currentState = this.stateManager.getState();
         const { updatedState, log } = this.combatSystem.performAction(currentState, action);
-        
         updatedState.log = [...currentState.log, ...log];
         this.stateManager.setState(updatedState);
     }
