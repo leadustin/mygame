@@ -1,29 +1,30 @@
-/**
- * state_manager.js
- * * Verwaltet den globalen Zustand des Spiels.
- * Jede Änderung am Spielzustand sollte über diesen Manager laufen.
- * Er benachrichtigt Listener (wie das Render-System), wenn sich der Zustand ändert.
- */
 import EventBus from './event_bus.js';
 
-// Wir erstellen eine globale Instanz des EventBus, die von allen Modulen genutzt werden kann.
-// Dies ist ein einfacher Weg, um eine einzige Instanz sicherzustellen, ohne auf komplexe DI-Muster zurückzugreifen.
+// Erstelle eine einzige, globale Instanz, die im ganzen Spiel verwendet wird.
 const eventBus = new EventBus();
 
 class StateManager {
     constructor() {
         this.gameState = {};
-        // Wir verwenden hier direkt die globale eventBus Instanz.
+        // Der StateManager nutzt intern die globale Instanz.
         this.eventBus = eventBus;
     }
 
     /**
-     * Gibt eine Kopie des aktuellen Spielzustands zurück.
+     * Gibt eine sichere Kopie des aktuellen Spielzustands zurück.
      * @returns {object} Der aktuelle Spielzustand.
      */
     getState() {
-        // Gibt eine tiefe Kopie zurück, um versehentliche Mutationen zu verhindern.
         return JSON.parse(JSON.stringify(this.gameState));
+    }
+    
+    /**
+     * Gibt eine direkte Referenz auf den Spielzustand zurück.
+     * Nur für den Game Loop verwenden, um Performance zu sparen.
+     * @returns {object} Der "lebende" Spielzustand.
+     */
+    getLiveState() {
+        return this.gameState;
     }
 
     /**
@@ -38,7 +39,7 @@ class StateManager {
 
     /**
      * Aktualisiert einen Teil des Spielzustands.
-     * @param {string} key - Der Schlüssel des Zustands, der aktualisiert werden soll (z.B. 'player').
+     * @param {string} key - Der Schlüssel des Zustands, der aktualisiert werden soll.
      * @param {*} value - Der neue Wert.
      */
     updateState(key, value) {
@@ -48,6 +49,5 @@ class StateManager {
     }
 }
 
-// Exportiere die StateManager-Klasse und die globale eventBus-Instanz.
 export default StateManager;
 export { eventBus };

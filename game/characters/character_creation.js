@@ -6,7 +6,7 @@ import { CLOAKS } from '../../data/items/cloaks.js';
 import { BELTS } from '../../data/items/belts.js';
 import { JEWELRY } from '../../data/items/jewelry.js';
 import { HANDS } from '../../data/items/hands.js';
-import { FEET } from '../../data/items/feet.js'; // Oder feet.js, je nach deinem Dateinamen
+import { FEET } from '../../data/items/feet.js';
 import { ARTIFACTS } from '../../data/items/artifacts.js';
 import { SHIELDS } from '../../data/items/shields.js';
 import { MATERIALS } from '../../data/items/materials.js';
@@ -41,7 +41,8 @@ export class CharacterCreator {
             level: 1,
             xp: 0,
             unspentStatPoints: 0,
-            mapPosition: { x: 2048, y: 1536 }, // HIER IST DIE FEHLENDE EIGENSCHAFT
+            gold: 25, // NEU: Startgold
+            mapPosition: { x: 2048, y: 1536 },
             hp: finalStats.vitality * 10,
             maxHp: finalStats.vitality * 10,
             mp: finalStats.intelligence * 10,
@@ -60,7 +61,7 @@ export class CharacterCreator {
             Object.values(classData.startEquipment).forEach(itemId => {
                 const item = Object.values(ALL_ITEMS).find(i => i.id === itemId);
                 if (item) {
-                    player.inventory.push({ ...item }); 
+                    player.inventory.push({ ...item });
                 }
             });
         }

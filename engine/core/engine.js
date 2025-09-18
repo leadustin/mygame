@@ -10,6 +10,7 @@ import { TooltipSystem } from '../../game/ui/tooltips.js';
 import { MapRenderer } from '../systems/map_renderer.js';
 import { CharacterSystem } from '../../game/characters/characters.js';
 import { MovementSystem } from '../gameplay/movement_system.js';
+import { WorldInteractionSystem } from '../gameplay/world_interaction_system.js';
 import { MATERIALS } from '../../data/items/materials.js';
 import { TOWNS } from '../../data/locations/towns.js';
 import { DUNGEONS } from '../../data/locations/dungeons.js';
@@ -24,6 +25,7 @@ class GameEngine {
         this.tooltipSystem = new TooltipSystem();
         this.mapRenderer = new MapRenderer();
         this.movementSystem = new MovementSystem();
+        this.worldInteractionSystem = new WorldInteractionSystem();
         
         this.lastTime = 0;
         this.gameLoop = this.gameLoop.bind(this);
@@ -34,7 +36,7 @@ class GameEngine {
 
         eventBus.subscribe('state:updated', (state) => this.renderSystem.render(state));
         eventBus.subscribe('ui:startGame', (characterData) => this.startGame(characterData));
-        eventBus.subscribe('game:startCombat', () => this.startCombat());
+        eventBus.subscribe('game:startCombat', (locationId) => this.startCombat(locationId));
         eventBus.subscribe('combat:action', (action) => this.handleCombatAction(action));
         eventBus.subscribe('inventory:itemMoved', (data) => this.handleItemMoved(data));
         eventBus.subscribe('game:save', () => this.saveGame());
@@ -48,6 +50,7 @@ class GameEngine {
         eventBus.subscribe('character:confirm_stats', (data) => this.handleConfirmStats(data));
         eventBus.subscribe('player:moveTo', (pos) => this.handlePlayerMove(pos));
         eventBus.subscribe('player:stopMove', () => this.handlePlayerStopMove());
+        eventBus.subscribe('world:location_entered', (locationId) => this.handleLocationEntered(locationId));
         
         this.showTitleScreen();
         
@@ -68,10 +71,11 @@ class GameEngine {
         const deltaTime = (timestamp - this.lastTime) / 1000 || 0;
         this.lastTime = timestamp;
 
-        const state = this.stateManager.getState();
+        const state = this.stateManager.getLiveState();
         
         if (state.currentView === 'map' && state.player) {
             this.movementSystem.update(state.player, deltaTime);
+            this.worldInteractionSystem.update(state.player);
             
             if (this.movementSystem.hasTarget()) {
                 this.mapRenderer.centerOnPlayer();
@@ -81,6 +85,21 @@ class GameEngine {
         }
 
         requestAnimationFrame(this.gameLoop);
+    }
+
+    handleLocationEntered(locationId) {
+        // Stoppe die Spielerbewegung, wenn ein Ort betreten wird
+        this.handlePlayerStopMove();
+
+        const allLocations = { ...DUNGEONS, ...TOWNS };
+        const locationKey = Object.keys(allLocations).find(key => allLocations[key].id === locationId);
+        if (locationKey) {
+            const location = allLocations[locationKey];
+            if (location.type === 'dungeon') {
+                this.startCombat(locationId);
+            }
+            // Hier könnten später andere Ortstypen wie 'town' behandelt werden
+        }
     }
 
     handleConfirmStats(data) {
@@ -100,7 +119,7 @@ class GameEngine {
     }
 
     handleTakeSelected(selectedIds) {
-        const state = this.stateManager.getState();
+        const state = this.stateManager.getLiveState();
         if (!state.postCombatState) return;
         const takenItems = [];
         const remainingLoot = state.postCombatState.loot.filter(item => {
@@ -112,19 +131,19 @@ class GameEngine {
         });
         state.player.inventory.push(...takenItems);
         state.postCombatState.loot = remainingLoot;
-        this.stateManager.setState(state);
+        this.stateManager.setState({ ...state });
     }
 
     handleTakeAll() {
-        const state = this.stateManager.getState();
+        const state = this.stateManager.getLiveState();
         if (!state.postCombatState) return;
         state.player.inventory.push(...state.postCombatState.loot);
         state.postCombatState.loot = [];
-        this.stateManager.setState(state);
+        this.stateManager.setState({ ...state });
     }
 
     handleDismantle(selectedIds) {
-        const state = this.stateManager.getState();
+        const state = this.stateManager.getLiveState();
         if (!state.postCombatState) return;
         const receivedMaterials = {};
         const remainingLoot = state.postCombatState.loot.filter(item => {
@@ -146,19 +165,18 @@ class GameEngine {
             }
         }
         state.postCombatState.loot = remainingLoot;
-        this.stateManager.setState(state);
+        this.stateManager.setState({ ...state });
     }
 
     handleCloseLoot() {
-        const state = this.stateManager.getState();
+        const state = this.stateManager.getLiveState();
         if (!state.postCombatState) return;
         let player = state.player;
         player.xp += state.postCombatState.xpGained;
+        player.gold += state.postCombatState.goldGained;
         const levelUpResult = CharacterSystem.checkForLevelUp(player);
-        player = levelUpResult.player;
         const finalState = {
             ...state,
-            player,
             currentView: 'map',
             log: [...state.postCombatState.originalLog, ...levelUpResult.log],
             postCombatState: null
@@ -194,9 +212,13 @@ class GameEngine {
         this.stateManager.setState(newGameState);
     }
 
-    startCombat() {
-        const dungeon = DUNGEONS.GOBLIN_CAVE;
-        const monsterData = dungeon.monsters[Math.floor(Math.random() * dungeon.monsters.length)];
+    startCombat(locationId) {
+        const allLocations = { ...DUNGEONS, ...TOWNS };
+        const locationKey = Object.keys(allLocations).find(key => allLocations[key].id === locationId);
+        if (!locationKey || !allLocations[locationKey].monsters) return;
+
+        const location = allLocations[locationKey];
+        const monsterData = location.monsters[Math.floor(Math.random() * location.monsters.length)];
         const monster = JSON.parse(JSON.stringify(monsterData));
         const state = this.stateManager.getState();
         const newState = {
@@ -209,13 +231,13 @@ class GameEngine {
     }
 
     handleCombatAction(action) {
-        const currentState = this.stateManager.getState();
+        const currentState = this.stateManager.getLiveState();
         const { updatedState, log } = this.combatSystem.performAction(currentState, action);
         this.stateManager.setState({ ...updatedState, log: [...currentState.log, ...log] });
     }
 
     handleItemMoved(data) {
-        const state = this.stateManager.getState();
+        const state = this.stateManager.getLiveState();
         const { player } = InventorySystem.handleItemMove(state.player, data.source, data.target);
         this.stateManager.updateState('player', player);
     }

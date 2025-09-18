@@ -14,7 +14,6 @@ export class CombatSystem {
     }
 
     performAction(state, action) {
-        // Erstelle explizite Kopien, um sicherzustellen, dass wir mit dem Zustand arbeiten
         let player = { ...state.player };
         let monster = { ...state.combat.monster };
         let log = [];
@@ -58,32 +57,46 @@ export class CombatSystem {
             }
         }
 
-        // Prüfen, ob Monster besiegt ist
+        // Wenn das Monster besiegt ist...
         if (monster.hp <= 0) {
             monster.hp = 0;
             log.push(`${monster.name} wurde besiegt!`);
-            // Komplette Belohnungslogik hier...
-            const xpGained = monster.xpValue || 0;
-            player.xp += xpGained;
-            log.push(`Du erhältst ${xpGained} Erfahrungspunkte.`);
-            const levelUpResult = CharacterSystem.checkForLevelUp(player);
-            player = levelUpResult.player;
-            if (levelUpResult.leveledUp) log.push(...levelUpResult.log);
+            
+            const generatedLoot = [];
+            let goldGained = 0;
             const lootTable = LOOT_TABLES[monster.lootPool];
+
             if (lootTable) {
-                const generatedLoot = [];
+                // Items generieren
                 lootTable.items.forEach(lootItem => {
                     if (Math.random() < lootItem.chance) {
-                        generatedLoot.push({ ...lootItem.item, lootId: `loot_${Date.now()}_${Math.random()}` });
+                        const newItem = { ...lootItem.item, lootId: `loot_${Date.now()}_${Math.random()}` };
+                        generatedLoot.push(newItem);
                     }
                 });
-                state.postCombatState = {
-                    xpGained: xpGained,
-                    loot: generatedLoot,
-                    originalLog: [...state.log, ...log]
-                };
+                // NEU: Gold generieren
+                if (lootTable.gold) {
+                    goldGained = Math.floor(Math.random() * (lootTable.gold.max - lootTable.gold.min + 1)) + lootTable.gold.min;
+                }
             }
-            return { updatedState: { ...state, player, currentView: 'post_combat_loot', combat: null }, log: [] };
+
+            const postCombatState = {
+                xpGained: monster.xpValue || 0,
+                loot: generatedLoot,
+                goldGained: goldGained, // NEU
+                originalLog: [...state.log, ...log]
+            };
+            
+            return {
+                updatedState: { 
+                    ...state, 
+                    player, 
+                    currentView: 'post_combat_loot',
+                    combat: null,
+                    postCombatState: postCombatState
+                },
+                log: [],
+            };
         }
 
         // Gegenangriff des Monsters
@@ -91,14 +104,12 @@ export class CombatSystem {
         player.hp -= damageTaken;
         log.push(`${monster.name} greift zurück und verursacht ${damageTaken} Schaden.`);
 
-        // Prüfen, ob Spieler besiegt ist
         if (player.hp <= 0) {
             player.hp = 0;
             log.push(`Du wurdest besiegt! Game Over.`);
             return { updatedState: { ...state, player, currentView: 'game_over', combat: null }, log };
         }
         
-        // Finalen, aktualisierten Zustand zurückgeben
         return { 
             updatedState: { 
                 ...state, 

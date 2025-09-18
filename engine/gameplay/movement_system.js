@@ -5,7 +5,7 @@
 export class MovementSystem {
     constructor() {
         this.targetPosition = null;
-        this.movementSpeed = 250; // Pixel pro Sekunde
+        this.movementSpeed = 50; // Pixel pro Sekunde
     }
 
     setTarget(target) {

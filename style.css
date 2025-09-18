@@ -33,10 +33,10 @@ body {
     height: 768px;
     border: 2px solid var(--border-color);
     background-color: var(--ui-bg-color);
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0,0,0,0.5);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0, 0, 0, 0.5);
     position: relative;
     overflow: hidden;
-    background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2));
+    background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2));
 }
 
 #main-view {
@@ -46,9 +46,12 @@ body {
 }
 
 /* --- Allgemeine UI-Elemente --- */
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
     color: var(--header-color);
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     font-weight: 700;
 }
 
@@ -63,7 +66,7 @@ button {
     font-family: var(--font-primary);
     font-size: 1em;
     text-shadow: 1px 1px 1px #000;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
 }
 
 button:hover {
@@ -94,13 +97,16 @@ hr {
     border: 1px solid #111;
     border-top-color: var(--border-color);
     border-radius: 3px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7), inset 0 0 5px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7), inset 0 0 5px rgba(0, 0, 0, 0.5);
     padding: 15px;
     display: none;
     z-index: 10;
-    resize: both;        /* Erlaubt das Ändern der Größe in beide Richtungen */
-    overflow: auto;      /* Notwendig, damit der Resize-Anfasser erscheint */
-    min-width: 350px;    /* Verhindert, dass Fenster zu schmal werden */
+    resize: both;
+    /* Erlaubt das Ändern der Größe in beide Richtungen */
+    overflow: auto;
+    /* Notwendig, damit der Resize-Anfasser erscheint */
+    min-width: 350px;
+    /* Verhindert, dass Fenster zu schmal werden */
     min-height: 300px;
 }
 
@@ -169,7 +175,7 @@ hr {
     font-size: 0.8em;
     position: relative;
     cursor: pointer;
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.7);
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.7);
 }
 
 .inventory-slot:hover {
@@ -181,7 +187,7 @@ hr {
     height: 65px;
     background-color: #1a1917;
     border: 1px solid #111;
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.7);
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.7);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -193,7 +199,8 @@ hr {
     font-size: 0.9em;
 }
 
-.equipment-slot img, .inventory-slot img {
+.equipment-slot img,
+.inventory-slot img {
     width: 64px;
     height: 64px;
 }
@@ -388,10 +395,13 @@ hr {
     padding: 10px 20px;
     border-left: 2px solid var(--border-color);
     border-right: 2px solid var(--border-color);
-    display: flex; /* Geändert von grid zu flex */
-    flex-direction: column; /* Ordnet die Bereiche untereinander an */
+    display: flex;
+    /* Geändert von grid zu flex */
+    flex-direction: column;
+    /* Ordnet die Bereiche untereinander an */
     gap: 15px;
-    align-items: center; /* Zentriert die Slot-Gruppen */
+    align-items: center;
+    /* Zentriert die Slot-Gruppen */
 }
 
 .equipment-group {
@@ -402,10 +412,12 @@ hr {
 }
 
 .equipment-group.weapons {
-    margin-top: auto; /* Drückt die Waffen-Slots nach unten */
+    margin-top: auto;
+    /* Drückt die Waffen-Slots nach unten */
     padding-top: 15px;
     border-top: 2px solid var(--border-color);
-    width: 100%; /* Sorgt dafür, dass die Border volle Breite hat */
+    width: 100%;
+    /* Sorgt dafür, dass die Border volle Breite hat */
 }
 
 #character-filtered-inventory-panel {
@@ -430,7 +442,7 @@ hr {
     border-radius: 4px;
     padding: 15px;
     width: 250px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.7);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
     pointer-events: none;
 }
 
@@ -492,8 +504,10 @@ hr {
 
 /* Der eigentliche Fensterinhalt kommt in diesen Container */
 .window-content {
-    flex-grow: 1; /* Sorgt dafür, dass der Inhalt den restlichen Platz füllt */
-    overflow: auto; /* Fügt Scrollbalken hinzu, falls der Inhalt zu groß wird */
+    flex-grow: 1;
+    /* Sorgt dafür, dass der Inhalt den restlichen Platz füllt */
+    overflow: auto;
+    /* Fügt Scrollbalken hinzu, falls der Inhalt zu groß wird */
 }
 
 /* in style.css */
@@ -515,7 +529,7 @@ hr {
     background-color: var(--ui-bg-color);
     border: 2px solid var(--border-color);
     padding: 20px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.6);
 }
 
 #loot-list {
@@ -525,7 +539,7 @@ hr {
     overflow-y: auto;
     border: 1px solid var(--border-color);
     padding: 10px;
-    background-color: rgba(0,0,0,0.2);
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 .loot-item {
@@ -533,12 +547,13 @@ hr {
     align-items: center;
     padding: 8px;
     cursor: pointer;
-    border: 2px solid transparent; /* Platzhalter für den Rahmen */
+    border: 2px solid transparent;
+    /* Platzhalter für den Rahmen */
     margin-bottom: 5px;
 }
 
 .loot-item:hover {
-    background-color: rgba(255,255,255,0.1);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .loot-item.selected {
@@ -559,16 +574,37 @@ hr {
     gap: 15px;
     margin-top: 20px;
 }
+
 /* --- Ende Beute-Bildschirm --- */
 
-/* in style.css */
+/* Gold-Anzeige im Beute-Fenster */
+#loot-gold {
+    margin-top: 15px;
+    font-size: 1.1em;
+    color: var(--highlight-color);
+}
+
+/* Permanente Gold-Anzeige im HUD */
+#hud-gold-display {
+    display: flex;
+    align-items: center;
+    color: var(--highlight-color);
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 5px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+}
+
+#hud-gold-display img {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+}
 
 /* --- Charakter-Ansicht (Erweitert mit XP und Stat-Punkten) --- */
 #character-info-header {
     margin-bottom: 10px;
 }
-
-/* in style.css */
 
 /* --- Charakter-Ansicht (Erweitert mit HP/MP/XP-Balken) --- */
 
@@ -585,7 +621,8 @@ hr {
 /* Allgemeiner Füll-Stil */
 .resource-bar-fill {
     height: 100%;
-    border-radius: 1px; /* Optional für abgerundete Ecken im Balken */
+    border-radius: 1px;
+    /* Optional für abgerundete Ecken im Balken */
 }
 
 /* Allgemeiner Text-Stil */
@@ -607,9 +644,11 @@ hr {
 .resource-bar-fill.hp {
     background: linear-gradient(to right, #8c2727, #c75c5c);
 }
+
 .resource-bar-fill.mp {
     background: linear-gradient(to right, #275d8c, #5c9ac7);
 }
+
 .resource-bar-fill.xp {
     background: linear-gradient(to right, #6d5b43, #c7a46e);
 }
@@ -624,7 +663,8 @@ hr {
 .stat-value-controls {
     display: flex;
     align-items: center;
-    gap: 5px; /* Abstand zwischen Wert und Buttons */
+    gap: 5px;
+    /* Abstand zwischen Wert und Buttons */
 }
 
 /* Gemeinsame Klasse für beide Buttons */
@@ -640,6 +680,7 @@ hr {
     cursor: pointer;
     box-shadow: none;
 }
+
 .stat-mod-btn:hover {
     background: var(--button-hover-bg);
 }
@@ -648,13 +689,15 @@ hr {
 .increase-stat-btn {
     color: var(--highlight-color);
 }
+
 .decrease-stat-btn {
     color: #ff8a8a;
 }
 
 /* Anpassung der Stat-Zeile für den Button */
 .stat-line {
-    align-items: center; /* Zentriert den Button vertikal */
+    align-items: center;
+    /* Zentriert den Button vertikal */
 }
 
 

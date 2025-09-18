@@ -1,4 +1,5 @@
 import { eventBus } from '../core/state_manager.js';
+import { MAP_LOCATIONS } from '../../data/locations/map_locations.js';
 
 /**
  * map_renderer.js
@@ -12,11 +13,13 @@ export class MapRenderer {
         this.tilesLoaded = false;
         this.playerTokenImage = null;
         this.player = null;
+        this.locations = {};
 
         this.mapCols = 32;
         this.mapRows = 24;
         this.tileWidth = 128;
         this.tileHeight = 128;
+        this.playerTokenSize = 16;
 
         this.scale = 0.5;
         this.minScale = 0.25;
@@ -26,8 +29,14 @@ export class MapRenderer {
         this.isPanning = false;
         this.panStart = { x: 0, y: 0 };
 
+        this.loadLocations();
         this.preloadPlayerToken();
         this.preloadTiles();
+    }
+
+    loadLocations() {
+        this.locations = MAP_LOCATIONS;
+        console.log("Orte auf der Karte geladen.");
     }
 
     preloadPlayerToken() {
@@ -130,6 +139,7 @@ export class MapRenderer {
             return;
         }
         
+        // Kacheln zeichnen
         for (let y = 1; y <= this.mapRows; y++) {
             for (let x = 1; x <= this.mapCols; x++) {
                 const tile = this.tiles[`${y}x${x}`];
@@ -145,12 +155,30 @@ export class MapRenderer {
             }
         }
         
+        // Ortsnamen zeichnen
+        this.ctx.fillStyle = '#fce8a8';
+        this.ctx.font = `${24 * Math.sqrt(this.scale)}px Cinzel`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'bottom';
+        this.ctx.shadowColor = 'black';
+        this.ctx.shadowBlur = 5;
+
+        for (const key in this.locations) {
+            const loc = this.locations[key];
+            const drawX = (loc.position.x - this.origin.x) * this.scale;
+            const drawY = (loc.position.y - this.origin.y) * this.scale;
+            this.ctx.fillText(loc.name, drawX, drawY);
+        }
+        this.ctx.shadowBlur = 0;
+
+
+        // Spieler-Figur zeichnen
         if (this.player && this.playerTokenImage && this.playerTokenImage.complete) {
             const playerX = this.player.mapPosition.x;
             const playerY = this.player.mapPosition.y;
             const drawX = (playerX - this.origin.x) * this.scale;
             const drawY = (playerY - this.origin.y) * this.scale;
-            const drawSize = this.tileWidth * this.scale;
+            const drawSize = this.playerTokenSize * this.scale;
             const centeredX = drawX - drawSize / 2;
             const centeredY = drawY - drawSize / 2;
             this.ctx.drawImage(this.playerTokenImage, centeredX, centeredY, drawSize, drawSize);
@@ -175,7 +203,7 @@ export class MapRenderer {
     }
     
     handlePanStart(e) {
-        if (e.button !== 0) return; // Nur auf Linksklick reagieren
+        if (e.button !== 0) return;
         eventBus.publish('player:stopMove');
         this.isPanning = true;
         this.panStart.x = e.clientX;
@@ -198,3 +226,4 @@ export class MapRenderer {
         this.isPanning = false;
     }
 }
+
