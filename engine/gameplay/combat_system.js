@@ -1,5 +1,7 @@
 import { LOOT_TABLES } from '../../data/items/loot_tables.js';
 import { CharacterSystem } from '../../game/characters/characters.js';
+import { SPELLS } from '../../data/items/spells.js';
+import { POTIONS } from '../../data/items/potions.js';
 
 export class CombatSystem {
 
@@ -12,68 +14,98 @@ export class CombatSystem {
     }
 
     performAction(state, action) {
-        let player = state.player;
-        const monster = state.combat.monster;
+        // Erstelle explizite Kopien, um sicherzustellen, dass wir mit dem Zustand arbeiten
+        let player = { ...state.player };
+        let monster = { ...state.combat.monster };
         let log = [];
 
-        if (action === 'attack') {
-            const damageDealt = this.calculateDamage(player, monster);
-            monster.hp -= damageDealt;
-            log.push(`${player.name} greift ${monster.name} an und verursacht ${damageDealt} Schaden.`);
+        // Spieler-Aktion
+        switch (action.type) {
+            case 'attack': {
+                const damageDealt = this.calculateDamage(player, monster);
+                monster.hp -= damageDealt;
+                log.push(`${player.name} greift an und verursacht ${damageDealt} Schaden.`);
+                break;
+            }
+            case 'spell': {
+                const spell = Object.values(SPELLS).find(s => s.id === action.spellId);
+                if (spell && player.mp >= spell.costMp) {
+                    player.mp -= spell.costMp;
+                    if (spell.effect.type === 'damage') {
+                        const damageDealt = spell.effect.amount + (player.stats.intelligence || 5);
+                        monster.hp -= damageDealt;
+                        log.push(`${player.name} wirkt ${spell.name} für ${damageDealt} Schaden!`);
+                    } else if (spell.effect.type === 'heal') {
+                        player.hp = Math.min(player.maxHp, player.hp + spell.effect.amount);
+                        log.push(`${player.name} wirkt ${spell.name} und heilt ${spell.effect.amount} HP.`);
+                    }
+                } else {
+                    log.push(`Nicht genug Mana für ${spell ? spell.name : 'diesen Zauber'}!`);
+                }
+                break;
+            }
+            case 'item': {
+                const itemIndex = player.inventory.findIndex(i => i && i.id === action.itemId);
+                if (itemIndex > -1) {
+                    const item = player.inventory[itemIndex];
+                    if (item.effect.type === 'heal') {
+                        player.hp = Math.min(player.maxHp, player.hp + item.effect.amount);
+                        log.push(`${player.name} benutzt ${item.name} und heilt ${item.effect.amount} HP.`);
+                    }
+                    player.inventory.splice(itemIndex, 1);
+                }
+                break;
+            }
         }
 
+        // Prüfen, ob Monster besiegt ist
         if (monster.hp <= 0) {
             monster.hp = 0;
             log.push(`${monster.name} wurde besiegt!`);
-            
-            // --- NEUE BELOHNUNGSLOGIK ---
-            // 1. XP vergeben
+            // Komplette Belohnungslogik hier...
             const xpGained = monster.xpValue || 0;
             player.xp += xpGained;
             log.push(`Du erhältst ${xpGained} Erfahrungspunkte.`);
-
-            // 2. Auf Level-Up prüfen
             const levelUpResult = CharacterSystem.checkForLevelUp(player);
-            player = levelUpResult.player; // Spieler-Objekt aktualisieren
-            if (levelUpResult.leveledUp) {
-                log.push(...levelUpResult.log);
-            }
-
-            // 3. Loot generieren
+            player = levelUpResult.player;
+            if (levelUpResult.leveledUp) log.push(...levelUpResult.log);
             const lootTable = LOOT_TABLES[monster.lootPool];
             if (lootTable) {
+                const generatedLoot = [];
                 lootTable.items.forEach(lootItem => {
                     if (Math.random() < lootItem.chance) {
-                        const item = { ...lootItem.item }; // Kopie erstellen
-                        player.inventory.push(item);
-                        log.push(`Du hast gefunden: ${item.name}!`);
+                        generatedLoot.push({ ...lootItem.item, lootId: `loot_${Date.now()}_${Math.random()}` });
                     }
                 });
+                state.postCombatState = {
+                    xpGained: xpGained,
+                    loot: generatedLoot,
+                    originalLog: [...state.log, ...log]
+                };
             }
-            
-            // Zustand nach dem Kampf zurückgeben
-            return {
-                updatedState: { ...state, player, currentView: 'map', combat: null },
-                log,
-            };
+            return { updatedState: { ...state, player, currentView: 'post_combat_loot', combat: null }, log: [] };
         }
 
+        // Gegenangriff des Monsters
         const damageTaken = this.calculateDamage(monster, player);
         player.hp -= damageTaken;
-        log.push(`${monster.name} greift ${player.name} an und verursacht ${damageTaken} Schaden.`);
+        log.push(`${monster.name} greift zurück und verursacht ${damageTaken} Schaden.`);
 
+        // Prüfen, ob Spieler besiegt ist
         if (player.hp <= 0) {
             player.hp = 0;
             log.push(`Du wurdest besiegt! Game Over.`);
-            return {
-                updatedState: { ...state, player, currentView: 'game_over', combat: null },
-                log,
-            };
+            return { updatedState: { ...state, player, currentView: 'game_over', combat: null }, log };
         }
         
-        return {
-            updatedState: { ...state, player, combat: { ...state.combat, monster } },
-            log,
+        // Finalen, aktualisierten Zustand zurückgeben
+        return { 
+            updatedState: { 
+                ...state, 
+                player, 
+                combat: { ...state.combat, monster } 
+            }, 
+            log 
         };
     }
 }

@@ -13,15 +13,13 @@
     --button-hover-bg: linear-gradient(to bottom, #8a7356, #6d5b43);
     --disabled-bg: #3a3a3a;
     --disabled-text: #777;
-
     --font-primary: 'Cinzel', serif;
 }
 
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: Arial, sans-serif; /* Fallback-Schriftart */
-    font-family: var(--font-primary); /* Haupt-Schriftart */
+    font-family: var(--font-primary), Arial, sans-serif;
     margin: 0;
     padding: 20px;
     display: flex;
@@ -38,7 +36,13 @@ body {
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(0,0,0,0.5);
     position: relative;
     overflow: hidden;
-    background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)); /* Leichte Textur */
+    background-image: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2));
+}
+
+#main-view {
+    width: 100%;
+    height: 100%;
+    position: relative;
 }
 
 /* --- Allgemeine UI-Elemente --- */
@@ -52,7 +56,7 @@ button {
     background: var(--button-bg);
     color: var(--highlight-color);
     border: 1px solid var(--border-color);
-    border-top-color: #8a7356; /* Hellerer Rand oben für 3D-Effekt */
+    border-top-color: #8a7356;
     padding: 10px 15px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -77,6 +81,11 @@ button:disabled {
     text-shadow: none;
 }
 
+hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 10px 0;
+}
 
 /* --- Fenster-Styling --- */
 .window {
@@ -89,6 +98,10 @@ button:disabled {
     padding: 15px;
     display: none;
     z-index: 10;
+    resize: both;        /* Erlaubt das Ändern der Größe in beide Richtungen */
+    overflow: auto;      /* Notwendig, damit der Resize-Anfasser erscheint */
+    min-width: 350px;    /* Verhindert, dass Fenster zu schmal werden */
+    min-height: 300px;
 }
 
 .window.active {
@@ -101,22 +114,16 @@ button:disabled {
     padding: 5px 0;
     border-bottom: 1px solid #4a3f33;
 }
+
 .stat-line span:first-child {
     font-weight: bold;
     color: var(--header-color);
 }
 
-hr {
-    border: none;
-    border-top: 1px solid var(--border-color);
-    margin: 10px 0;
-}
-
-
-/* --- Spezifische Fenster --- */
+/* --- Log Fenster --- */
 #log-window {
     position: absolute;
-    top: 600px; /* Ein Startwert, damit es unten auf dem Bildschirm beginnt */
+    top: 600px;
     left: 10px;
     width: 20%;
     height: 150px;
@@ -132,38 +139,18 @@ hr {
 
 .draggable-window {
     display: flex;
-    flex-direction: column; /* Damit der Header über dem Inhalt steht */
+    flex-direction: column;
 }
 
 .window-header {
     background-color: rgba(0, 0, 0, 0.3);
     padding: 5px 10px;
-    cursor: move; /* Ändert den Mauszeiger, um Beweglichkeit zu signalisieren */
+    cursor: move;
     border-bottom: 1px solid var(--border-color);
-    user-select: none; /* Verhindert das Markieren von Text beim Ziehen */
+    user-select: none;
 }
 
-#context-menu {
-    position: absolute;
-    z-index: 1000;
-    background-color: var(--ui-bg-color);
-    border: 1px solid var(--border-color);
-    padding: 5px;
-    display: none;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-}
-
-.context-menu-item {
-    padding: 8px 12px;
-    cursor: pointer;
-    color: var(--text-color);
-}
-
-.context-menu-item:hover {
-    background-color: #8a7356;
-    color: #fff;
-}
-
+/* --- Inventar & Ausrüstung --- */
 #inventory-grid {
     display: grid;
     grid-template-columns: repeat(8, 64px);
@@ -189,6 +176,32 @@ hr {
     border-color: var(--highlight-color);
 }
 
+.equipment-slot {
+    width: 65px;
+    height: 65px;
+    background-color: #1a1917;
+    border: 1px solid #111;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.equipment-slot .slot-name {
+    color: #555;
+    font-size: 0.9em;
+}
+
+.equipment-slot img, .inventory-slot img {
+    width: 64px;
+    height: 64px;
+}
+
+.drag-over {
+    border: 2px solid var(--highlight-color);
+    background-color: rgba(252, 232, 168, 0.2);
+}
 
 /* --- Titelscreen --- */
 #title-screen-container {
@@ -215,7 +228,7 @@ hr {
     padding: 12px;
 }
 
-/* --- Charaktererstellung (Wizard-Layout) --- */
+/* --- Charaktererstellung --- */
 #cc-wizard-container {
     display: flex;
     flex-direction: column;
@@ -247,7 +260,7 @@ hr {
     flex-grow: 1;
     display: flex;
     gap: 30px;
-    overflow-y: auto; /* Wichtig für Inhalte */
+    overflow-y: auto;
 }
 
 #cc-selection-list {
@@ -256,7 +269,7 @@ hr {
     gap: 10px;
     border-right: 2px solid var(--border-color);
     padding-right: 30px;
-    min-width: 200px; /* Feste Breite für die Liste */
+    min-width: 200px;
 }
 
 .selection-button {
@@ -296,7 +309,7 @@ hr {
     display: flex;
     justify-content: space-between;
     padding-top: 20px;
-    margin-top: auto; /* Drückt die Buttons nach unten */
+    margin-top: auto;
     border-top: 2px solid var(--border-color);
 }
 
@@ -306,7 +319,6 @@ hr {
     font-size: 1.2em;
 }
 
-/* Spezifische Stile für finale Schritte */
 #cc-finalization-panel {
     display: flex;
     flex-direction: column;
@@ -315,6 +327,7 @@ hr {
     justify-content: center;
     width: 100%;
 }
+
 #cc-finalization-panel input {
     font-family: var(--font-primary);
     background-color: var(--bg-color);
@@ -338,13 +351,79 @@ hr {
     background-color: #000;
     border: 2px solid var(--border-color);
     border-radius: 4px;
-    cursor: help; /* Zeigt an, dass es hier mehr Infos gibt */
+    cursor: help;
 }
-/* --- Ende der Charaktererstellung --- */
 
-/* Das globale Tooltip-Element */
+.cc-gender-selection {
+    display: flex;
+    gap: 10px;
+}
+
+.cc-gender-btn {
+    padding: 12px 20px;
+    font-size: 1.1em;
+    width: 150px;
+}
+
+.cc-gender-btn.active {
+    background: var(--button-hover-bg);
+    border-color: var(--highlight-color);
+    color: #fff;
+}
+
+/* --- Charakter-Ansicht (3 Spalten) --- */
+#character-window .window-content {
+    display: flex;
+    gap: 20px;
+}
+
+#character-stats-panel {
+    width: 280px;
+    flex-shrink: 0;
+}
+
+#character-equipment-panel {
+    width: 240px;
+    flex-shrink: 0;
+    padding: 10px 20px;
+    border-left: 2px solid var(--border-color);
+    border-right: 2px solid var(--border-color);
+    display: flex; /* Geändert von grid zu flex */
+    flex-direction: column; /* Ordnet die Bereiche untereinander an */
+    gap: 15px;
+    align-items: center; /* Zentriert die Slot-Gruppen */
+}
+
+.equipment-group {
+    display: grid;
+    grid-template-columns: repeat(2, 82px);
+    gap: 15px;
+    justify-content: center;
+}
+
+.equipment-group.weapons {
+    margin-top: auto; /* Drückt die Waffen-Slots nach unten */
+    padding-top: 15px;
+    border-top: 2px solid var(--border-color);
+    width: 100%; /* Sorgt dafür, dass die Border volle Breite hat */
+}
+
+#character-filtered-inventory-panel {
+    width: 280px;
+    flex-shrink: 0;
+}
+
+#filtered-inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 64px);
+    grid-gap: 8px;
+    margin-top: 10px;
+}
+
+
+/* --- Tooltip --- */
 #tooltip {
-    position: fixed; /* Fixed, damit es über allem schwebt */
+    position: fixed;
     z-index: 9999;
     background-color: var(--ui-bg-color);
     border: 1px solid var(--border-color);
@@ -352,16 +431,15 @@ hr {
     padding: 15px;
     width: 250px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.7);
-    pointer-events: none; /* Sorgt dafür, dass die Maus "durch" den Tooltip klickt */
+    pointer-events: none;
 }
 
 #tooltip h3 {
     margin-top: 0;
     color: var(--highlight-color);
 }
-/* --- Ende der Tooltip-Stile --- */
 
-/* --- HUD (Heads-Up Display) --- */
+/* --- HUD --- */
 #hud-container {
     position: absolute;
     bottom: 0;
@@ -381,4 +459,208 @@ hr {
     padding: 8px;
     font-size: 1em;
 }
-/* --- Ende des HUD --- */
+
+/* Stellt sicher, dass der Header und der Inhalt korrekt angeordnet sind */
+.window {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Modifiziere den Header, um den Button aufzunehmen */
+.window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.window-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.5em;
+    font-weight: bold;
+    line-height: 1;
+    padding: 0 5px;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.window-close-btn:hover {
+    color: var(--highlight-color);
+    background: none;
+}
+
+/* Der eigentliche Fensterinhalt kommt in diesen Container */
+.window-content {
+    flex-grow: 1; /* Sorgt dafür, dass der Inhalt den restlichen Platz füllt */
+    overflow: auto; /* Fügt Scrollbalken hinzu, falls der Inhalt zu groß wird */
+}
+
+/* in style.css */
+
+/* --- Beute-Bildschirm nach dem Kampf --- */
+#loot-screen-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    padding: 30px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+#loot-panel {
+    width: 600px;
+    background-color: var(--ui-bg-color);
+    border: 2px solid var(--border-color);
+    padding: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+}
+
+#loot-list {
+    margin: 20px 0;
+    min-height: 150px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    background-color: rgba(0,0,0,0.2);
+}
+
+.loot-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    cursor: pointer;
+    border: 2px solid transparent; /* Platzhalter für den Rahmen */
+    margin-bottom: 5px;
+}
+
+.loot-item:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+.loot-item.selected {
+    border-color: var(--highlight-color);
+    background-color: rgba(200, 160, 110, 0.2);
+}
+
+.loot-item img {
+    width: 40px;
+    height: 40px;
+    margin-right: 15px;
+    border: 1px solid var(--border-color);
+}
+
+#loot-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+/* --- Ende Beute-Bildschirm --- */
+
+/* in style.css */
+
+/* --- Charakter-Ansicht (Erweitert mit XP und Stat-Punkten) --- */
+#character-info-header {
+    margin-bottom: 10px;
+}
+
+/* in style.css */
+
+/* --- Charakter-Ansicht (Erweitert mit HP/MP/XP-Balken) --- */
+
+/* Allgemeiner Container für alle Balken (HP, MP, XP) */
+.resource-bar-container {
+    width: 100%;
+    height: 16px;
+    background-color: #111;
+    border: 1px solid var(--border-color);
+    margin-top: 8px;
+    position: relative;
+}
+
+/* Allgemeiner Füll-Stil */
+.resource-bar-fill {
+    height: 100%;
+    border-radius: 1px; /* Optional für abgerundete Ecken im Balken */
+}
+
+/* Allgemeiner Text-Stil */
+.resource-bar-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+    font-size: 0.8em;
+}
+
+/* Spezifische Farben für die Füllung */
+.resource-bar-fill.hp {
+    background: linear-gradient(to right, #8c2727, #c75c5c);
+}
+.resource-bar-fill.mp {
+    background: linear-gradient(to right, #275d8c, #5c9ac7);
+}
+.resource-bar-fill.xp {
+    background: linear-gradient(to right, #6d5b43, #c7a46e);
+}
+
+.stat-points-display {
+    text-align: center;
+    margin: 15px 0;
+    font-size: 1.1em;
+    color: var(--highlight-color);
+}
+
+.stat-value-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Abstand zwischen Wert und Buttons */
+}
+
+/* Gemeinsame Klasse für beide Buttons */
+.stat-mod-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    font-weight: bold;
+    font-size: 1.2em;
+    width: 24px;
+    height: 24px;
+    line-height: 20px;
+    padding: 0;
+    cursor: pointer;
+    box-shadow: none;
+}
+.stat-mod-btn:hover {
+    background: var(--button-hover-bg);
+}
+
+/* Spezifische Farben */
+.increase-stat-btn {
+    color: var(--highlight-color);
+}
+.decrease-stat-btn {
+    color: #ff8a8a;
+}
+
+/* Anpassung der Stat-Zeile für den Button */
+.stat-line {
+    align-items: center; /* Zentriert den Button vertikal */
+}
+
+
+.confirm-stats-btn {
+    width: 100%;
+    margin-top: 15px;
+    padding: 10px;
+    font-size: 1.1em;
+}

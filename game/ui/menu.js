@@ -29,4 +29,13 @@ export class UIManager {
     closeAllWindows() {
         this.stateManager.updateState('activeWindows', []);
     }
+
+    closeWindow(windowName) {
+        const state = this.stateManager.getState();
+        const activeWindows = new Set(state.activeWindows || []);
+
+        activeWindows.delete(windowName); // Entferne nur das spezifische Fenster
+
+        this.stateManager.updateState('activeWindows', Array.from(activeWindows));
+    }
 }

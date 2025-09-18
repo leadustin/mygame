@@ -1,7 +1,3 @@
-/**
- * engine.js
- * * Haupt-Einstiegspunkt des Spiels.
- */
 import StateManager from './state_manager.js';
 import { eventBus } from './state_manager.js';
 import { RenderSystem } from '../systems/render.js';
@@ -11,12 +7,13 @@ import { CombatSystem } from '../gameplay/combat_system.js';
 import { InventorySystem } from '../../game/systems/inventory/inventory.js';
 import { SaveSystem } from '../systems/save.js';
 import { TooltipSystem } from '../../game/ui/tooltips.js';
-
-// Daten importieren
+import { MapRenderer } from '../systems/map_renderer.js';
+import { CharacterSystem } from '../../game/characters/characters.js';
+import { MovementSystem } from '../gameplay/movement_system.js';
+import { MATERIALS } from '../../data/items/materials.js';
 import { TOWNS } from '../../data/locations/towns.js';
 import { DUNGEONS } from '../../data/locations/dungeons.js';
 import { CLASSES } from '../../game/characters/classes.js';
-
 
 class GameEngine {
     constructor() {
@@ -25,6 +22,8 @@ class GameEngine {
         this.uiManager = new UIManager(this.stateManager);
         this.combatSystem = new CombatSystem();
         this.tooltipSystem = new TooltipSystem();
+        this.mapRenderer = new MapRenderer();
+        this.movementSystem = new MovementSystem();
         
         this.lastTime = 0;
         this.gameLoop = this.gameLoop.bind(this);
@@ -33,18 +32,23 @@ class GameEngine {
     init() {
         console.log("Engine initialisiert...");
 
-        // Alle globalen Events abonnieren
         eventBus.subscribe('state:updated', (state) => this.renderSystem.render(state));
         eventBus.subscribe('ui:startGame', (characterData) => this.startGame(characterData));
         eventBus.subscribe('game:startCombat', () => this.startCombat());
         eventBus.subscribe('combat:action', (action) => this.handleCombatAction(action));
-        eventBus.subscribe('inventory:use', (item) => this.useItem(item));
-        eventBus.subscribe('inventory:equip', (item) => this.equipItem(item));
+        eventBus.subscribe('inventory:itemMoved', (data) => this.handleItemMoved(data));
         eventBus.subscribe('game:save', () => this.saveGame());
         eventBus.subscribe('game:load', () => this.loadGame());
         eventBus.subscribe('ui:newGame', () => this.setupInitialState());
+        eventBus.subscribe('ui:closeWindow', (name) => this.handleCloseWindow(name));
+        eventBus.subscribe('loot:take_selected', (ids) => this.handleTakeSelected(ids));
+        eventBus.subscribe('loot:take_all', () => this.handleTakeAll());
+        eventBus.subscribe('loot:dismantle', (ids) => this.handleDismantle(ids));
+        eventBus.subscribe('loot:close', () => this.handleCloseLoot());
+        eventBus.subscribe('character:confirm_stats', (data) => this.handleConfirmStats(data));
+        eventBus.subscribe('player:moveTo', (pos) => this.handlePlayerMove(pos));
+        eventBus.subscribe('player:stopMove', () => this.handlePlayerStopMove());
         
-        // Startlogik: Immer mit dem Titelscreen beginnen.
         this.showTitleScreen();
         
         this.uiManager.initEventListeners();
@@ -52,20 +56,120 @@ class GameEngine {
         requestAnimationFrame(this.gameLoop);
     }
 
-    /**
-     * Setzt den initialen Zustand auf den Titelbildschirm.
-     */
-    showTitleScreen() {
-        const initialState = {
-            currentView: 'title_screen',
-            log: [],
-        };
-        this.stateManager.setState(initialState);
+    handlePlayerMove(position) {
+        this.movementSystem.setTarget(position);
     }
 
-    /**
-     * Setzt den Zustand für die Charaktererstellung (wird von "Neues Spiel" aufgerufen).
-     */
+    handlePlayerStopMove() {
+        this.movementSystem.setTarget(null);
+    }
+    
+    gameLoop(timestamp) {
+        const deltaTime = (timestamp - this.lastTime) / 1000 || 0;
+        this.lastTime = timestamp;
+
+        const state = this.stateManager.getState();
+        
+        if (state.currentView === 'map' && state.player) {
+            this.movementSystem.update(state.player, deltaTime);
+            
+            if (this.movementSystem.hasTarget()) {
+                this.mapRenderer.centerOnPlayer();
+            }
+
+            this.mapRenderer.draw();
+        }
+
+        requestAnimationFrame(this.gameLoop);
+    }
+
+    handleConfirmStats(data) {
+        const state = this.stateManager.getState();
+        let player = state.player;
+        player.stats = data.newStats;
+        player.unspentStatPoints = data.remainingPoints;
+        player.maxHp = player.stats.vitality * 10;
+        player.maxMp = player.stats.intelligence * 10;
+        player.hp = Math.min(player.hp, player.maxHp);
+        player.mp = Math.min(player.mp, player.maxMp);
+        this.stateManager.updateState('player', player);
+    }
+
+    handleCloseWindow(windowName) {
+        this.uiManager.closeWindow(windowName);
+    }
+
+    handleTakeSelected(selectedIds) {
+        const state = this.stateManager.getState();
+        if (!state.postCombatState) return;
+        const takenItems = [];
+        const remainingLoot = state.postCombatState.loot.filter(item => {
+            if (selectedIds.includes(item.lootId)) {
+                takenItems.push(item);
+                return false;
+            }
+            return true;
+        });
+        state.player.inventory.push(...takenItems);
+        state.postCombatState.loot = remainingLoot;
+        this.stateManager.setState(state);
+    }
+
+    handleTakeAll() {
+        const state = this.stateManager.getState();
+        if (!state.postCombatState) return;
+        state.player.inventory.push(...state.postCombatState.loot);
+        state.postCombatState.loot = [];
+        this.stateManager.setState(state);
+    }
+
+    handleDismantle(selectedIds) {
+        const state = this.stateManager.getState();
+        if (!state.postCombatState) return;
+        const receivedMaterials = {};
+        const remainingLoot = state.postCombatState.loot.filter(item => {
+            if (selectedIds.includes(item.lootId) && item.dismantleYields) {
+                for (const matId in item.dismantleYields) {
+                    const yieldData = item.dismantleYields[matId];
+                    if (Math.random() < yieldData.chance) {
+                        receivedMaterials[matId] = (receivedMaterials[matId] || 0) + yieldData.quantity[0];
+                    }
+                }
+                return false;
+            }
+            return true;
+        });
+        for (const matId in receivedMaterials) {
+            const materialTemplate = Object.values(MATERIALS).find(m => m.id === matId);
+            if(materialTemplate) {
+                state.player.inventory.push({ ...materialTemplate, quantity: receivedMaterials[matId] });
+            }
+        }
+        state.postCombatState.loot = remainingLoot;
+        this.stateManager.setState(state);
+    }
+
+    handleCloseLoot() {
+        const state = this.stateManager.getState();
+        if (!state.postCombatState) return;
+        let player = state.player;
+        player.xp += state.postCombatState.xpGained;
+        const levelUpResult = CharacterSystem.checkForLevelUp(player);
+        player = levelUpResult.player;
+        const finalState = {
+            ...state,
+            player,
+            currentView: 'map',
+            log: [...state.postCombatState.originalLog, ...levelUpResult.log],
+            postCombatState: null
+        };
+        this.stateManager.setState(finalState);
+    }
+
+    showTitleScreen() {
+        this.stateManager.setState({ currentView: 'title_screen', log: [] });
+    }
+
     setupInitialState() {
         const initialGameState = {
             currentView: 'character_creation',
@@ -77,9 +181,6 @@ class GameEngine {
         this.stateManager.setState(initialGameState);
     }
 
-    /**
-     * Wird aufgerufen, nachdem der Spieler seinen Charakter erstellt hat.
-     */
     startGame(characterData) {
         const player = CharacterCreator.createCharacter(characterData);
         const newGameState = {
@@ -93,9 +194,6 @@ class GameEngine {
         this.stateManager.setState(newGameState);
     }
 
-    /**
-     * Startet einen neuen Kampf.
-     */
     startCombat() {
         const dungeon = DUNGEONS.GOBLIN_CAVE;
         const monsterData = dungeon.monsters[Math.floor(Math.random() * dungeon.monsters.length)];
@@ -110,39 +208,18 @@ class GameEngine {
         this.stateManager.setState(newState);
     }
 
-    /**
-     * Verarbeitet eine Aktion im Kampf.
-     */
     handleCombatAction(action) {
         const currentState = this.stateManager.getState();
         const { updatedState, log } = this.combatSystem.performAction(currentState, action);
-        updatedState.log = [...currentState.log, ...log];
-        this.stateManager.setState(updatedState);
-    }
-    
-    /**
-     * Benutzt einen Gegenstand aus dem Inventar.
-     */
-    useItem(item) {
-        const state = this.stateManager.getState();
-        const { player, log } = InventorySystem.useItem(state.player, item);
-        const newState = { ...state, player, log: [...state.log, log] };
-        this.stateManager.setState(newState);
+        this.stateManager.setState({ ...updatedState, log: [...currentState.log, ...log] });
     }
 
-    /**
-     * Rüstet einen Gegenstand aus.
-     */
-    equipItem(item) {
+    handleItemMoved(data) {
         const state = this.stateManager.getState();
-        const { player, log } = InventorySystem.equipItem(state.player, item);
-        const newState = { ...state, player, log: [...state.log, log] };
-        this.stateManager.setState(newState);
+        const { player } = InventorySystem.handleItemMove(state.player, data.source, data.target);
+        this.stateManager.updateState('player', player);
     }
 
-    /**
-     * Speichert das aktuelle Spiel.
-     */
     saveGame() {
         const state = this.stateManager.getState();
         if (SaveSystem.saveGame(state)) {
@@ -151,22 +228,16 @@ class GameEngine {
         }
     }
 
-    /**
-     * Lädt das Spiel.
-     */
     loadGame() {
         const loadedState = SaveSystem.loadGame();
         if (loadedState) {
+            if (loadedState.player && !loadedState.player.mapPosition) {
+                loadedState.player.mapPosition = { x: 2048, y: 1536 };
+            }
             this.stateManager.setState(loadedState);
             const newLog = [...loadedState.log, "Spiel geladen."];
             this.stateManager.updateState('log', newLog);
         }
-    }
-
-    gameLoop(timestamp) {
-        const deltaTime = (timestamp - this.lastTime) / 1000;
-        this.lastTime = timestamp;
-        requestAnimationFrame(this.gameLoop);
     }
 }
 
@@ -175,3 +246,4 @@ window.addEventListener('DOMContentLoaded', () => {
     window.gameEngine = engine; 
     engine.init();
 });
+

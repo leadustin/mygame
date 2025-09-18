@@ -5,8 +5,20 @@
 import { WEAPONS } from '../../data/items/weapons.js';
 import { ARMOR } from '../../data/items/armor.js';
 import { POTIONS } from '../../data/items/potions.js';
-// Fasse alle bekannten Items in einem Objekt zusammen, um sie leicht nachschlagen zu können.
-const ALL_ITEMS = { ...WEAPONS, ...ARMOR, ...POTIONS };
+import { CLOAKS } from '../../data/items/cloaks.js';
+import { BELTS } from '../../data/items/belts.js';
+import { JEWELRY } from '../../data/items/jewelry.js';
+import { HANDS } from '../../data/items/hands.js';
+import { FEET } from '../../data/items/feet.js';
+import { ARTIFACTS } from '../../data/items/artifacts.js';
+import { SHIELDS } from '../../data/items/shields.js'; // NEU
+import { MATERIALS } from '../../data/items/materials.js'; // NEU
+
+const ALL_ITEMS = { 
+    ...WEAPONS, ...ARMOR, ...POTIONS, ...CLOAKS, ...BELTS, 
+    ...JEWELRY, ...HANDS, ...FEET, ...ARTIFACTS, ...SHIELDS,
+    ...MATERIALS // NEU
+};
 
 export class TooltipSystem {
     constructor() {

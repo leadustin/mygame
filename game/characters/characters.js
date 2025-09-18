@@ -28,14 +28,20 @@ export class CharacterSystem {
             player.xp -= xpNeeded;
             leveledUp = true;
             
-            // Werte verbessern
-            player.stats.strength += 2;
-            player.stats.vitality += 1;
-            player.maxHp += 10;
-            player.hp = player.maxHp; // Volle Heilung beim Level-Up
+            // --- GEÄNDERTE LOGIK ---
+            // Anstatt Stats direkt zu erhöhen, vergeben wir Punkte.
+            const pointsGained = 3; // Beispiel: 3 Punkte pro Level-Up
+            player.unspentStatPoints = (player.unspentStatPoints || 0) + pointsGained;
+            
+            // Ein kleiner Bonus auf HP/MP beim Level-Up ist trotzdem nett.
+            player.maxHp += 5; 
+            player.maxMp += 5;
+
+            // Volle Heilung
+            player.hp = player.maxHp;
             player.mp = player.maxMp;
 
-            log.push(`LEVEL UP! Du bist jetzt Level ${player.level}!`);
+            log.push(`LEVEL UP! Du bist jetzt Level ${player.level} und hast ${pointsGained} Punkte zum Verteilen!`);
         }
 
         return { player, leveledUp, log };

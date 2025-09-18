@@ -1,58 +1,82 @@
-/**
- * inventory.js
- * * Enthält die Spiellogik für das Verwalten von Inventar und Ausrüstung. (Korrigierte Version)
- */
 import { CLASSES } from '../../characters/classes.js';
+import { RACES } from '../../characters/races.js';
 
 export class InventorySystem {
-
-    static equipItem(player, itemToEquip) {
-        const slot = itemToEquip.type;
-        if (!slot) return { player, log: 'Dieses Item kann nicht ausgerüstet werden.' };
-
-        const itemIndex = player.inventory.findIndex(i => i.id === itemToEquip.id);
-        if (itemIndex > -1) {
-            player.inventory.splice(itemIndex, 1);
+    /**
+     * Verarbeitet die Bewegung eines Items, ausgelöst durch Drag & Drop.
+     */
+    static handleItemMove(player, source, target) {
+        // Hole das Item von der Quelle (kann auch 'undefined' sein)
+        let sourceItem = null;
+        if (source.source === 'inventory') {
+            sourceItem = player.inventory[source.index];
+        } else {
+            sourceItem = player.equipment[source.slot];
         }
 
-        if (player.equipment[slot]) {
-            player.inventory.push(player.equipment[slot]);
+        // Hole das Item vom Ziel (kann auch 'undefined' sein)
+        let targetItem = null;
+        if (target.type === 'inventory') {
+            targetItem = player.inventory[target.index];
+        } else {
+            targetItem = player.equipment[target.slot];
         }
 
-        player.equipment[slot] = itemToEquip;
-        player = this.recalculateStats(player); // Werte neu berechnen
+        // Validierung: Passt das gezogene Item an den Zielort?
+        if (sourceItem && target.type === 'equipment' && !target.slot.startsWith(sourceItem.type)) {
+            return { player, log: [] };
+        }
+        // Validierung: Passt das Ziel-Item (falls vorhanden) an den Ursprungsort?
+        if (targetItem && source.source === 'equipment' && !source.slot.startsWith(targetItem.type)) {
+            return { player, log: [] };
+        }
 
-        return { player, log: `${itemToEquip.name} wurde ausgerüstet.` };
-    }
-    
-    static useItem(player, itemToUse) {
-        if (itemToUse.type !== 'potion') return { player, log: "Das kann nicht benutzt werden." };
+        // --- Führe den Tausch (Swap) durch ---
+        // Setze das Ziel-Item an den Quellort
+        if (source.source === 'inventory') {
+            player.inventory[source.index] = targetItem;
+        } else {
+            player.equipment[source.slot] = targetItem;
+        }
 
-        if (itemToUse.effect.type === 'heal') {
-            player.hp = Math.min(player.maxHp, player.hp + itemToUse.effect.amount);
+        // Setze das Quell-Item an den Zielort
+        if (target.type === 'inventory') {
+            // Wenn der Ziel-Index nicht definiert ist (Drop auf leeren Bereich), finde den ersten leeren Platz
+            if (target.index === undefined || target.index === null) {
+                const emptyIndex = player.inventory.findIndex(i => i === undefined || i === null);
+                if (emptyIndex !== -1) {
+                    player.inventory[emptyIndex] = sourceItem;
+                } else {
+                    player.inventory.push(sourceItem); // Wenn kein Platz, ans Ende
+                }
+            } else {
+                 player.inventory[target.index] = sourceItem;
+            }
+        } else {
+            player.equipment[target.slot] = sourceItem;
         }
         
-        const itemIndex = player.inventory.findIndex(i => i.id === itemToUse.id);
-        if (itemIndex > -1) {
-            player.inventory.splice(itemIndex, 1);
+        // Werte neu berechnen, falls sich die Ausrüstung geändert hat
+        if (source.source === 'equipment' || target.type === 'equipment') {
+            player = this.recalculateStats(player);
         }
-
-        return { player, log: `${itemToUse.name} wurde benutzt. Du heilst ${itemToUse.effect.amount} HP.` };
+        
+        return { player, log: [] };
     }
 
     /**
-     * Berechnet die Gesamtwerte des Spielers neu (Basiswerte + Ausrüstung).
+     * Berechnet die Gesamtwerte des Spielers neu.
      */
     static recalculateStats(player) {
-        // KORRIGIERTE LOGIK: Benutze die classId für eine zuverlässige Suche
-        const characterClassData = CLASSES[player.classId];
-        if (!characterClassData) {
-            console.error(`Klassendaten für ID ${player.classId} nicht gefunden!`);
-            return player;
-        }
+        const classData = CLASSES[player.classId];
+        const raceData = RACES[player.raceId];
+        if (!classData || !raceData) return player;
         
-        const baseStats = characterClassData.baseStats;
-        player.stats = { ...baseStats };
+        const finalBaseStats = { ...classData.baseStats };
+        for (const stat in raceData.statModifiers) {
+            finalBaseStats[stat] = (finalBaseStats[stat] || 0) + raceData.statModifiers[stat];
+        }
+        player.stats = finalBaseStats;
 
         for (const slot in player.equipment) {
             const item = player.equipment[slot];
