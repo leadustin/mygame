@@ -9,7 +9,8 @@ export const MAP_LOCATIONS = {
         name: 'Goblin-Höhle', // Der Text, der auf der Karte angezeigt wird
         type: 'dungeon_entrance',
         position: { x: 2800, y: 1000 }, // Beispiel: Pixel-Koordinaten (im Nordosten)
-        triggerRadius: 100 // Der Radius in Pixeln, in dem ein Ereignis ausgelöst wird
+        triggerRadius: 100, // Der Radius in Pixeln, in dem ein Ereignis ausgelöst wird
+        targetLocationId: 'DUNGEON_GOBLIN_CAVE' // NEU: Verweis auf die tatsächliche Dungeon-ID
     },
     // Hier könnten später weitere Orte wie Städte, Ruinen etc. hinzugefügt werden
     STARTING_TOWN: {
@@ -17,6 +18,7 @@ export const MAP_LOCATIONS = {
         name: 'Anfangsdorf',
         type: 'town',
         position: { x: 2048, y: 1536 }, // In der Mitte der Karte
-        triggerRadius: 150
+        triggerRadius: 150,
+        targetLocationId: 'TOWN_START' // NEU: Verweis auf die tatsächliche Town-ID
     }
 };

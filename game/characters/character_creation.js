@@ -41,13 +41,14 @@ export class CharacterCreator {
             level: 1,
             xp: 0,
             unspentStatPoints: 0,
-            gold: 25, // NEU: Startgold
+            gold: 25,
             mapPosition: { x: 2048, y: 1536 },
             hp: finalStats.vitality * 10,
             maxHp: finalStats.vitality * 10,
             mp: finalStats.intelligence * 10,
             maxMp: finalStats.intelligence * 10,
             stats: finalStats,
+            discoveredLocations: [],
             inventory: [],
             equipment: {},
             spellbook: []

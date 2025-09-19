@@ -1,21 +1,14 @@
-import { eventBus } from '../core/state_manager.js';
+// in /engine/gameplay/world_interaction_system.js
+
+import { eventBus } from '../core/event_bus.js';
 import { MAP_LOCATIONS } from '../../data/locations/map_locations.js';
 
-/**
- * world_interaction_system.js
- * * Überprüft die Spielerposition und löst Ereignisse aus, wenn Orte erreicht werden.
- */
 export class WorldInteractionSystem {
     constructor() {
-        // Merkt sich, in welchem Ort sich der Spieler gerade befindet,
-        // um das Event nicht 60x pro Sekunde auszulösen.
-        this.currentLocationId = null;
+        // Dieses Gedächtnis stellt sicher, dass das Entdeckungs-Event nur einmal pro Annäherung ausgelöst wird.
+        this.recentlyTriggeredId = null; 
     }
 
-    /**
-     * Prüft in jedem Frame, ob der Spieler einen Ort betreten oder verlassen hat.
-     * @param {object} player - Das Spieler-Objekt.
-     */
     update(player) {
         if (!player) return;
 
@@ -24,31 +17,28 @@ export class WorldInteractionSystem {
         for (const key in MAP_LOCATIONS) {
             const location = MAP_LOCATIONS[key];
             const playerPos = player.mapPosition;
-            const locationPos = location.position;
 
-            // Berechne die Distanz zwischen Spieler und Ort
-            const dx = playerPos.x - locationPos.x;
-            const dy = playerPos.y - locationPos.y;
+            const dx = playerPos.x - location.position.x;
+            const dy = playerPos.y - location.position.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
-            // Prüfe, ob der Spieler im Trigger-Radius ist
+            // Prüfen, ob der Spieler im Radius ist
             if (distance < location.triggerRadius) {
                 locationFound = true;
-                // Wenn der Spieler diesen Ort NEU betritt...
-                if (this.currentLocationId !== location.id) {
-                    this.currentLocationId = location.id;
-                    console.log(`Ort betreten: ${location.name}`);
-                    // ...löse ein Event mit den gesamten Orts-Daten aus.
-                    eventBus.publish('world:location_entered', location);
+                
+                // Prüfen, ob der Ort NEU entdeckt wurde UND nicht gerade erst getriggert wurde
+                if (!player.discoveredLocations.includes(location.id) && this.recentlyTriggeredId !== location.id) {
+                    this.recentlyTriggeredId = location.id; // Für diese Annäherung merken
+                    // Statt direkt zu wechseln, lösen wir das Event zum Anzeigen des Fensters aus
+                    eventBus.publish('ui:show_location_prompt', location);
                 }
-                break; // Beende die Schleife, da der Spieler nur an einem Ort sein kann.
+                break;
             }
         }
 
-        // Wenn der Spieler in keinem Radius mehr ist, setze den Standort zurück.
-        if (!locationFound && this.currentLocationId !== null) {
-            console.log(`Ort verlassen.`);
-            this.currentLocationId = null;
+        // Wenn der Spieler keinen Ort mehr in der Nähe hat, das Gedächtnis zurücksetzen
+        if (!locationFound) {
+            this.recentlyTriggeredId = null;
         }
     }
 }

@@ -9,6 +9,7 @@ export const TOWNS = {
         name: 'Anfangsdorf',
         type: 'town',
         description: 'Ein ruhiges kleines Dorf am Rande des Königreichs. Der perfekte Ort, um ein Abenteuer zu beginnen.',
+        mapImage: 'assets/images/maps/starting_town.webp',
         connectedLocations: ['DUNGEON_GOBLIN_CAVE'],
         services: ['tavern', 'shop']
     }

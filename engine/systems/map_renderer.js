@@ -41,7 +41,7 @@ export class MapRenderer {
 
     preloadPlayerToken() {
         this.playerTokenImage = new Image();
-        this.playerTokenImage.src = 'assets/images/map/player_token.webp';
+        this.playerTokenImage.src = 'assets/images/maps/player_token.webp';
     }
 
     preloadTiles() {
