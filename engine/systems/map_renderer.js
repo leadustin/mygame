@@ -29,6 +29,14 @@ export class MapRenderer {
         this.isPanning = false;
         this.panStart = { x: 0, y: 0 };
 
+        // Bind event handlers to the class instance to maintain 'this' context
+        this.handleZoom = this.handleZoom.bind(this);
+        this.handlePanStart = this.handlePanStart.bind(this);
+        this.handlePanMove = this.handlePanMove.bind(this);
+        this.handlePanEnd = this.handlePanEnd.bind(this);
+        this.handleRightClick = this.handleRightClick.bind(this);
+        this.handleMapClick = this.handleMapClick.bind(this);
+
         this.loadLocations();
         this.preloadPlayerToken();
         this.preloadTiles();
@@ -36,7 +44,6 @@ export class MapRenderer {
 
     loadLocations() {
         this.locations = MAP_LOCATIONS;
-        console.log("Orte auf der Karte geladen.");
     }
 
     preloadPlayerToken() {
@@ -66,27 +73,125 @@ export class MapRenderer {
 
     init(container, player) {
         this.player = player;
-        if (this.canvas && this.canvas.parentElement) {
+        if (this.canvas && this.canvas.parentElement === container) {
             this.draw();
             return;
         };
+        
+        if (this.canvas) this.canvas.remove();
+
         this.canvas = document.createElement('canvas');
         this.canvas.width = container.clientWidth;
         this.canvas.height = container.clientHeight;
         this.ctx = this.canvas.getContext('2d');
         container.appendChild(this.canvas);
 
-        this.canvas.addEventListener('wheel', (e) => this.handleZoom(e));
-        this.canvas.addEventListener('mousedown', (e) => this.handlePanStart(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handlePanMove(e));
-        this.canvas.addEventListener('mouseup', () => this.handlePanEnd());
-        this.canvas.addEventListener('mouseleave', () => this.handlePanEnd());
-        this.canvas.addEventListener('contextmenu', (e) => this.handleRightClick(e));
+        this.canvas.addEventListener('wheel', this.handleZoom);
+        this.canvas.addEventListener('mousedown', this.handlePanStart);
+        this.canvas.addEventListener('mousemove', this.handlePanMove);
+        this.canvas.addEventListener('mouseup', this.handlePanEnd);
+        this.canvas.addEventListener('mouseleave', this.handlePanEnd);
+        this.canvas.addEventListener('contextmenu', this.handleRightClick);
+        this.canvas.addEventListener('click', this.handleMapClick);
 
         this.centerOnPlayer(true);
         this.draw();
     }
+    
+    handleMapClick(e) {
+        if (!this.player) return;
 
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const worldX = mouseX / this.scale + this.origin.x;
+        const worldY = mouseY / this.scale + this.origin.y;
+
+        for (const key in this.locations) {
+            const loc = this.locations[key];
+
+            if (this.player.discoveredLocations.includes(loc.id)) {
+                const textWidth = this.ctx.measureText(loc.name).width / this.scale;
+                const textHeight = 24 / this.scale; 
+                if (worldX >= loc.position.x - textWidth / 2 && worldX <= loc.position.x + textWidth / 2 &&
+                    worldY >= loc.position.y - textHeight && worldY <= loc.position.y) {
+                    
+                    const dx = this.player.mapPosition.x - loc.position.x;
+                    const dy = this.player.mapPosition.y - loc.position.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < loc.triggerRadius) {
+                        eventBus.publish('ui:show_location_prompt', loc);
+                    } else {
+                        // Optional: Feedback, dass der Spieler zu weit weg ist.
+                        // eventBus.publish('game:log', `Du bist zu weit von ${loc.name} entfernt.`);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    draw() {
+        if (!this.canvas || !this.ctx || !this.player) return;
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        if (!this.tilesLoaded) {
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = '16px Cinzel';
+            this.ctx.fillText('Lade Karte...', 20, 40);
+            return;
+        }
+        
+        for (let y = 1; y <= this.mapRows; y++) {
+            for (let x = 1; x <= this.mapCols; x++) {
+                const tile = this.tiles[`${y}x${x}`];
+                if (tile && tile.complete) {
+                    const drawX = ( (x-1) * this.tileWidth - this.origin.x) * this.scale;
+                    const drawY = ( (y-1) * this.tileHeight - this.origin.y) * this.scale;
+                    const drawWidth = this.tileWidth * this.scale + 1;
+                    const drawHeight = this.tileHeight * this.scale + 1;
+                    if (drawX + drawWidth > 0 && drawX < this.canvas.width && drawY + drawHeight > 0 && drawY < this.canvas.height) {
+                        this.ctx.drawImage(tile, drawX, drawY, drawWidth, drawHeight);
+                    }
+                }
+            }
+        }
+        
+        this.ctx.font = `${24 * Math.sqrt(this.scale)}px Cinzel`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'bottom';
+        this.ctx.shadowColor = 'black';
+        this.ctx.shadowBlur = 5;
+
+        for (const key in this.locations) {
+            const loc = this.locations[key];
+            
+            if (this.player.discoveredLocations.includes(loc.id)) {
+                this.ctx.fillStyle = '#fce8a8'; // Gold
+            } else {
+                this.ctx.fillStyle = '#ffffff'; // Weiß
+            }
+
+            const drawX = (loc.position.x - this.origin.x) * this.scale;
+            const drawY = (loc.position.y - this.origin.y) * this.scale;
+            this.ctx.fillText(loc.name, drawX, drawY);
+        }
+        this.ctx.shadowBlur = 0;
+
+        if (this.playerTokenImage && this.playerTokenImage.complete) {
+            const playerX = this.player.mapPosition.x;
+            const playerY = this.player.mapPosition.y;
+            const drawX = (playerX - this.origin.x) * this.scale;
+            const drawY = (playerY - this.origin.y) * this.scale;
+            const drawSize = this.playerTokenSize * this.scale;
+            const centeredX = drawX - drawSize / 2;
+            const centeredY = drawY - drawSize / 2;
+            this.ctx.drawImage(this.playerTokenImage, centeredX, centeredY, drawSize, drawSize);
+        }
+    }
+    
     centerOnPlayer(instant = false) {
         if (!this.player || !this.canvas) return;
         
@@ -102,8 +207,12 @@ export class MapRenderer {
     handleRightClick(e) {
         e.preventDefault();
         
-        const worldX = e.offsetX / this.scale + this.origin.x;
-        const worldY = e.offsetY / this.scale + this.origin.y;
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const worldX = mouseX / this.scale + this.origin.x;
+        const worldY = mouseY / this.scale + this.origin.y;
         
         eventBus.publish('player:moveTo', { x: worldX, y: worldY });
     }
@@ -127,71 +236,17 @@ export class MapRenderer {
         this.origin.x = Math.max(minX, Math.min(this.origin.x, maxX));
         this.origin.y = Math.max(minY, Math.min(this.origin.y, maxY));
     }
-
-    draw() {
-        if (!this.canvas || !this.ctx) return;
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-        if (!this.tilesLoaded) {
-            this.ctx.fillStyle = 'white';
-            this.ctx.font = '16px Cinzel';
-            this.ctx.fillText('Lade Karte...', 20, 40);
-            return;
-        }
-        
-        // Kacheln zeichnen
-        for (let y = 1; y <= this.mapRows; y++) {
-            for (let x = 1; x <= this.mapCols; x++) {
-                const tile = this.tiles[`${y}x${x}`];
-                if (tile && tile.complete) {
-                    const drawX = ( (x-1) * this.tileWidth - this.origin.x) * this.scale;
-                    const drawY = ( (y-1) * this.tileHeight - this.origin.y) * this.scale;
-                    const drawWidth = this.tileWidth * this.scale + 1;
-                    const drawHeight = this.tileHeight * this.scale + 1;
-                    if (drawX + drawWidth > 0 && drawX < this.canvas.width && drawY + drawHeight > 0 && drawY < this.canvas.height) {
-                        this.ctx.drawImage(tile, drawX, drawY, drawWidth, drawHeight);
-                    }
-                }
-            }
-        }
-        
-        // Ortsnamen zeichnen
-        this.ctx.fillStyle = '#fce8a8';
-        this.ctx.font = `${24 * Math.sqrt(this.scale)}px Cinzel`;
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'bottom';
-        this.ctx.shadowColor = 'black';
-        this.ctx.shadowBlur = 5;
-
-        for (const key in this.locations) {
-            const loc = this.locations[key];
-            const drawX = (loc.position.x - this.origin.x) * this.scale;
-            const drawY = (loc.position.y - this.origin.y) * this.scale;
-            this.ctx.fillText(loc.name, drawX, drawY);
-        }
-        this.ctx.shadowBlur = 0;
-
-
-        // Spieler-Figur zeichnen
-        if (this.player && this.playerTokenImage && this.playerTokenImage.complete) {
-            const playerX = this.player.mapPosition.x;
-            const playerY = this.player.mapPosition.y;
-            const drawX = (playerX - this.origin.x) * this.scale;
-            const drawY = (playerY - this.origin.y) * this.scale;
-            const drawSize = this.playerTokenSize * this.scale;
-            const centeredX = drawX - drawSize / 2;
-            const centeredY = drawY - drawSize / 2;
-            this.ctx.drawImage(this.playerTokenImage, centeredX, centeredY, drawSize, drawSize);
-        }
-    }
-
+    
     handleZoom(e) {
         e.preventDefault();
         const zoomIntensity = 0.1;
         const scroll = e.deltaY < 0 ? 1 : -1;
         const zoom = Math.exp(scroll * zoomIntensity);
-        const mouseX = e.offsetX;
-        const mouseY = e.offsetY;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
         const worldX = mouseX / this.scale + this.origin.x;
         const worldY = mouseY / this.scale + this.origin.y;
         this.scale *= zoom;
@@ -226,4 +281,3 @@ export class MapRenderer {
         this.isPanning = false;
     }
 }
-

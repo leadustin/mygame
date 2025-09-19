@@ -15,6 +15,7 @@ import { MATERIALS } from "../../data/items/materials.js";
 import { TOWNS } from "../../data/locations/towns.js";
 import { DUNGEONS } from "../../data/locations/dungeons.js";
 import { CLASSES } from "../../game/characters/classes.js";
+import { TradingSystem } from "../gameplay/trading_system.js";
 
 class GameEngine {
   constructor() {
@@ -76,6 +77,15 @@ class GameEngine {
     eventBus.subscribe("ui:cancel_enter_location", () =>
       this.cancelEnterLocation()
     );
+    eventBus.subscribe("ui:show_dialogue", (npcData) =>
+      this.showDialogue(npcData)
+    );
+    eventBus.subscribe("ui:close_dialogue", () => this.closeDialogue());
+    eventBus.subscribe("ui:start_trade", (npcData) => this.startTrade(npcData));
+    eventBus.subscribe("ui:close_trade", () => this.closeTrade());
+    eventBus.subscribe("trade:buy", (item) => this.handleBuy(item));
+    eventBus.subscribe("trade:sell", (data) => this.handleSell(data));
+    eventBus.subscribe("trade:buy_back", (item) => this.handleBuyBack(item));
 
     this.showTitleScreen();
 
@@ -132,24 +142,39 @@ class GameEngine {
     const state = this.stateManager.getState();
     let player = state.player;
 
-    // Ort als "entdeckt" markieren, falls noch nicht geschehen
+    // Ort als "entdeckt" markieren
     if (!player.discoveredLocations.includes(locationData.id)) {
       player.discoveredLocations.push(locationData.id);
     }
 
-    // Führe die Logik aus, die vorher in handleLocationEntered war
+    const targetId = locationData.targetLocationId || locationData.id;
+
     if (locationData.type === "dungeon_entrance") {
-      this.startCombat(locationData.targetLocationId);
+      this.startCombat(targetId);
     } else if (locationData.type === "town") {
-      const newState = {
-        ...state,
-        currentView: "location",
-        currentLocation: locationData,
-        pendingInteraction: null, // Fenster-Info aus State entfernen
-        player: player, // Aktualisierten Spieler speichern
-        log: [...state.log, `Willkommen in ${locationData.name}.`],
-      };
-      this.stateManager.setState(newState);
+      // Finde den vollständigen Datensatz der Stadt in TOWNS
+      const townKey = Object.keys(TOWNS).find(
+        (key) => TOWNS[key].id === targetId
+      );
+      const fullTownData = townKey ? TOWNS[townKey] : null;
+
+      if (fullTownData) {
+        // Jetzt haben wir das Objekt MIT der Eigenschaft 'mapImage'
+        const newState = {
+          ...state,
+          currentView: "location",
+          currentLocation: fullTownData, // Wir speichern das vollständige Objekt
+          pendingInteraction: null,
+          player: player,
+          log: [...state.log, `Willkommen in ${fullTownData.name}.`],
+        };
+        this.stateManager.setState(newState);
+      } else {
+        console.error(
+          `Stadt mit der ID ${targetId} wurde nicht in towns.js gefunden.`
+        );
+        this.cancelEnterLocation(); // Fallback, um einen Absturz zu verhindern
+      }
     }
   }
 
@@ -196,6 +221,82 @@ class GameEngine {
           locationData.targetLocationId || locationData.id
         } nicht gefunden.`
       );
+    }
+  }
+
+  showDialogue(npcData) {
+    this.stateManager.updateState("activeDialogue", {
+      speaker: npcData.name,
+      text: npcData.dialogue,
+      isMerchant: npcData.isMerchant || false,
+      npcData: npcData, // Wir geben die kompletten NPC-Daten weiter
+    });
+  }
+
+  closeDialogue() {
+    this.stateManager.updateState("activeDialogue", null);
+  }
+
+  startTrade(npcData) {
+    this.stateManager.setState({
+      ...this.stateManager.getState(),
+      activeDialogue: null,
+      activeTradeSession: {
+        merchant: npcData,
+      },
+    });
+  }
+
+  closeTrade() {
+    this.stateManager.updateState("activeTradeSession", null);
+  }
+
+  handleBuy(item) {
+    const state = this.stateManager.getState();
+    const result = TradingSystem.playerBuysItem(
+      state.player,
+      state.activeTradeSession.merchant,
+      item
+    );
+    if (result.success) {
+      this.stateManager.setState({
+        ...state,
+        player: result.player,
+        activeTradeSession: { merchant: result.merchant },
+      });
+    }
+  }
+
+  handleSell(data) {
+    const state = this.stateManager.getState();
+    const result = TradingSystem.playerSellsItem(
+      state.player,
+      state.activeTradeSession.merchant,
+      data.item,
+      data.index
+    );
+    if (result.success) {
+      this.stateManager.setState({
+        ...state,
+        player: result.player,
+        activeTradeSession: { merchant: result.merchant },
+      });
+    }
+  }
+
+  handleBuyBack(item) {
+    const state = this.stateManager.getState();
+    const result = TradingSystem.playerBuysBackItem(
+      state.player,
+      state.activeTradeSession.merchant,
+      item
+    );
+    if (result.success) {
+      this.stateManager.setState({
+        ...state,
+        player: result.player,
+        activeTradeSession: { merchant: result.merchant },
+      });
     }
   }
 

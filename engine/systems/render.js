@@ -68,11 +68,49 @@ export class RenderSystem {
         this.mainView.innerHTML = `<h2>Unbekannte Ansicht: ${state.currentView}</h2>`;
     }
 
+    if (state.activeDialogue) {
+      // Stelle sicher, dass kein Handelsfenster im Weg ist
+      const oldTrade = document.getElementById("trade-window");
+      if (oldTrade) oldTrade.remove();
+
+      this.renderDialogueBox(state.activeDialogue);
+    } else if (state.activeTradeSession) {
+      // Stelle sicher, dass kein Dialogfenster im Weg ist
+      const oldDialogue = document.getElementById("dialogue-box");
+      if (oldDialogue) oldDialogue.remove();
+
+      this.renderTradeWindow(state);
+    } else {
+      // Dieser Block schließt das letzte offene Fenster (Dialog oder Handel)
+      const oldBox =
+        document.getElementById("dialogue-box") ||
+        document.getElementById("trade-window");
+      if (oldBox) oldBox.remove();
+    }
+
     if (state.currentView === "map" || state.currentView === "combat") {
       this.renderHud();
       this.renderActiveWindows(state, this.gameContainer);
+    } else if (state.currentView === "location") {
+      // Setze den Schutz-Schalter zurück, damit renderHud() wieder funktioniert
+      delete this.hudContainer.dataset.listenerAttached;
+
+      // Zeigt NUR den "Weltkarte"-Knopf in der HUD-Leiste
+      this.hudContainer.innerHTML = `
+                <button id="exit-location-btn" class="hud-button">Weltkarte</button>
+            `;
+
+      // Füge den Event-Listener direkt hinzu
+      document
+        .getElementById("exit-location-btn")
+        .addEventListener("click", () => {
+          this.mainView.style.backgroundImage = "none";
+          eventBus.publish("ui:exitLocation");
+        });
     } else {
+      // Für alle anderen Ansichten wird die Leiste geleert und der Schalter zurückgesetzt
       this.hudContainer.innerHTML = "";
+      delete this.hudContainer.dataset.listenerAttached;
     }
     if (state.pendingInteraction) {
       this.renderInteractionPrompt(state.pendingInteraction);
@@ -340,6 +378,143 @@ export class RenderSystem {
     renderWizard();
   }
 
+  renderDialogueBox(dialogue) {
+    if (document.getElementById("dialogue-box")) return;
+    const dialogueEl = document.createElement("div");
+    dialogueEl.id = "dialogue-box";
+    dialogueEl.className = "window active";
+    dialogueEl.style.position = "fixed";
+    dialogueEl.style.bottom = "10%";
+    dialogueEl.style.left = "50%";
+    dialogueEl.style.width = "60%";
+    dialogueEl.style.transform = "translateX(-50%)";
+    dialogueEl.style.zIndex = "100";
+
+    let buttonsHtml = `<button id="close-dialogue-btn">Schließen</button>`;
+    if (dialogue.isMerchant) {
+      buttonsHtml += `<button id="trade-btn">Handeln</button>`;
+    }
+
+    dialogueEl.innerHTML = `
+            <div class="window-header">
+                <span>${dialogue.speaker}</span>
+            </div>
+            <div class="window-content" style="padding: 20px; text-align: left;">
+                <p>"${dialogue.text}"</p>
+                <div class="dialogue-actions" style="margin-top: 20px; text-align: right;">${buttonsHtml}</div>
+            </div>
+        `;
+
+    document.body.appendChild(dialogueEl);
+
+    document
+      .getElementById("close-dialogue-btn")
+      .addEventListener("click", () => eventBus.publish("ui:close_dialogue"));
+    if (dialogue.isMerchant) {
+      document
+        .getElementById("trade-btn")
+        .addEventListener("click", () =>
+          eventBus.publish("ui:start_trade", dialogue.npcData)
+        );
+    }
+  }
+
+  // FÜGE DIESE NEUE FUNKTION hinzu
+  renderTradeWindow(state) {
+        // Wir aktualisieren das Fenster bei jeder Änderung, anstatt es nur einmal zu erstellen
+        const existingWindow = document.getElementById('trade-window');
+        if (existingWindow) existingWindow.remove();
+
+        const { player, activeTradeSession } = state;
+        const merchant = activeTradeSession.merchant;
+
+        const tradeEl = document.createElement('div');
+        tradeEl.id = 'trade-window';
+        tradeEl.className = 'window active';
+        tradeEl.style.width = '90%';
+        tradeEl.style.maxWidth = '1400px'; // Etwas mehr Platz für das 3-Spalten-Layout
+        tradeEl.style.height = '80%';
+        tradeEl.style.position = 'fixed';
+        tradeEl.style.top = '10%';
+        tradeEl.style.left = '50%';
+        tradeEl.style.transform = 'translateX(-50%)';
+        tradeEl.style.zIndex = '99';
+
+        // Helper-Funktion zum Erstellen eines Grids
+        const renderInventoryGrid = (items, source, size = 30) => { // 5 Spalten * 6 Reihen = 30 Slots
+            let html = '';
+            for(let i = 0; i < size; i++) {
+                const item = items[i];
+                if (item) {
+                    html += `<div class="inventory-slot" data-source="${source}" data-index="${i}" data-tooltip-id="${item.id}"><img src="${item.icon}" alt="${item.name}"></div>`;
+                } else {
+                    html += `<div class="inventory-slot"></div>`;
+                }
+            }
+            return html;
+        };
+
+        const playerInventoryHtml = renderInventoryGrid(player.inventory, 'player');
+        const merchantInventoryHtml = renderInventoryGrid(merchant.inventory, 'merchant');
+        const buyBackHtml = renderInventoryGrid(merchant.buyBack, 'buyback', 10); // Kleinere Grid-Größe für Rückkauf
+
+        tradeEl.innerHTML = `
+            <div class="window-header"><span>Handel mit ${merchant.name}</span><button class="window-close-btn" id="close-trade-btn">×</button></div>
+            <div class="window-content trade-content">
+                <div class="trade-panel">
+                    <div class="trade-character">
+                        <img src="${merchant.sprite}" alt="${merchant.name}">
+                        <p>${merchant.name}</p>
+                        <p>Gold: ${merchant.gold}</p>
+                    </div>
+                    <h4>Angebot</h4>
+                    <div class="inventory-grid trade-grid" id="merchant-trade-grid">${merchantInventoryHtml}</div>
+                </div>
+
+                <div class="trade-panel">
+                    <div class="trade-character">
+                        <img src="assets/images/portraits/player.webp" alt="Spieler">
+                        <p>${player.name}</p>
+                        <p>Dein Gold: ${player.gold}</p>
+                    </div>
+                    <h4>Dein Inventar</h4>
+                    <div class="inventory-grid trade-grid" id="player-trade-grid">${playerInventoryHtml}</div>
+                </div>
+
+                <div class="trade-panel buyback-panel">
+                    <div class="trade-character">
+                         <h4>Rückkauf</h4>
+                         <p style="font-size: 0.8em;">(Zum Verkaufspreis)</p>
+                    </div>
+                    <div class="inventory-grid trade-grid" id="buyback-grid">${buyBackHtml}</div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(tradeEl);
+
+        document.getElementById('close-trade-btn').addEventListener('click', () => eventBus.publish('ui:close_trade'));
+        
+        tradeEl.addEventListener('click', (e) => {
+            const slot = e.target.closest('.inventory-slot');
+            if (!slot || !slot.dataset.tooltipId) return;
+
+            const source = slot.dataset.source;
+            const index = parseInt(slot.dataset.index, 10);
+
+            if (source === 'player') {
+                const item = player.inventory[index];
+                if(item) eventBus.publish('trade:sell', { item, index });
+            } else if (source === 'merchant') {
+                const item = merchant.inventory[index];
+                if(item) eventBus.publish('trade:buy', item);
+            } else if (source === 'buyback') {
+                const item = merchant.buyBack[index];
+                if(item) eventBus.publish('trade:buy_back', item);
+            }
+        });
+    }
+
   renderMapView(state) {
     if (window.gameEngine && window.gameEngine.mapRenderer) {
       window.gameEngine.mapRenderer.init(this.mainView, state.player);
@@ -356,25 +531,40 @@ export class RenderSystem {
       return;
     }
 
-    // Setze das Kartenbild als Hintergrund
+    // Setzt das korrekte Hintergrundbild für die Stadt
     this.mainView.style.backgroundImage = `url(${location.mapImage})`;
     this.mainView.style.backgroundSize = "cover";
     this.mainView.style.backgroundPosition = "center";
 
-    // Füge einen Knopf zum Verlassen hinzu
-    this.mainView.innerHTML = `
-            <div style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
-                <button id="exit-location-btn">Weltkarte</button>
-            </div>
-        `;
+    // Leert den Inhalt, um nur die Elemente des Ortes zu zeichnen
+    let locationContentHtml = "";
 
-    document
-      .getElementById("exit-location-btn")
-      .addEventListener("click", () => {
-        // Setze den Hintergrund zurück, wenn der Ort verlassen wird
-        this.mainView.style.backgroundImage = "none";
-        eventBus.publish("ui:exitLocation");
+    // Fügt NPCs hinzu, falls sie in den Ortsdaten definiert sind
+    if (location.npcs && location.npcs.length > 0) {
+      location.npcs.forEach((npc) => {
+        locationContentHtml += `
+                    <img src="${npc.sprite}" 
+                         alt="${npc.name}" 
+                         class="location-npc"
+                         data-npcid="${npc.id}"
+                         style="position: absolute; left: ${npc.position.x}px; top: ${npc.position.y}px; cursor: pointer; width: 64px; height: 64px;">
+                `;
       });
+    }
+
+    this.mainView.innerHTML = locationContentHtml;
+
+    // Fügt einen einzigen Event-Listener für die gesamte Ansicht hinzu, um Klicks auf NPCs abzufangen
+    this.mainView.addEventListener("click", (e) => {
+      const target = e.target;
+      if (target.classList.contains("location-npc")) {
+        const npcId = target.dataset.npcid;
+        const npcData = location.npcs.find((n) => n.id === npcId);
+        if (npcData) {
+          eventBus.publish("ui:show_dialogue", npcData);
+        }
+      }
+    });
   }
 
   renderInteractionPrompt(interaction) {

@@ -707,3 +707,51 @@ hr {
     padding: 10px;
     font-size: 1.1em;
 }
+
+/* in style.css */
+
+/* --- Handelsfenster-Layout --- */
+.trade-content {
+    display: flex; /* Haupt-Container für die 3 Spalten */
+    justify-content: space-between;
+    gap: 15px;
+    height: 100%;
+}
+
+.trade-panel {
+    flex: 1; /* Jede der 3 Spalten nimmt gleich viel Platz ein */
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+}
+
+.trade-character {
+    text-align: center;
+    margin-bottom: 15px;
+    flex-shrink: 0; /* Verhindert, dass dieser Bereich schrumpft */
+}
+
+.trade-character img {
+    width: 80px;
+    height: 80px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    background-color: #000;
+}
+
+.trade-grid {
+    display: grid;
+    /* 5 Spalten mit je 64px Breite und 8px Abstand */
+    grid-template-columns: repeat(5, 64px); 
+    gap: 8px;
+    justify-content: center;
+    overflow-y: auto; /* Scrollbar, falls mehr Items als Platz vorhanden */
+    flex-grow: 1; /* Das Grid füllt den restlichen Platz im Panel */
+}
+
+.buyback-panel {
+    flex-basis: 33%; /* Der Rückkauf-Bereich ist etwas schmaler */
+}
