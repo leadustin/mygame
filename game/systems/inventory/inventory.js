@@ -1,12 +1,61 @@
-import { CLASSES } from '../../characters/classes.js';
-import { RACES } from '../../characters/races.js';
-
 export class InventorySystem {
     /**
      * Verarbeitet die Bewegung eines Items, ausgelöst durch Drag & Drop.
+     * @param {object} player - Das aktuelle Spieler-Objekt.
+     * @param {object} source - Das Quellobjekt, von dem das Item kommt.
+     * @param {object} target - Das Zielobjekt, wohin das Item verschoben wird.
      */
     static handleItemMove(player, source, target) {
-        // Hole das Item von der Quelle (kann auch 'undefined' sein)
+        // Holen der korrekten Engine-Instanz aus dem globalen Scope
+        const engine = window.gameEngine;
+
+        // --- HANDELSLOGIK ---
+        
+        // VERKAUFEN: Item aus Inventar/Ausrüstung wird zum Händler gezogen.
+        if ((source.source === 'inventory' || source.source === 'equipment') && (target.type === 'merchant' || target.type === 'shop')) {
+            let itemToSell;
+            let sellData = {
+                item: null,
+                source: source.source
+            };
+
+            if (source.source === 'inventory') {
+                itemToSell = player.inventory[source.index];
+                sellData.item = itemToSell;
+                sellData.index = source.index;
+            } else {
+                itemToSell = player.equipment[source.slot];
+                sellData.item = itemToSell;
+                sellData.slot = source.slot;
+            }
+
+            if (itemToSell) {
+                // Verwende die korrekten Methodennamen aus engine.js
+                engine.handleSell(sellData);
+                return; // Die Engine kümmert sich um das State-Update.
+            }
+        }
+
+        // KAUFEN / ZURÜCKKAUFEN: Item vom Händler wird ins Inventar gezogen.
+        if ((source.source === 'merchant' || source.source === 'buyback') && target.type === 'inventory') {
+            const state = engine.stateManager.getState();
+            if (!state.activeTradeSession) return { player, log: [] };
+            
+            const merchant = state.activeTradeSession.merchant;
+            let itemToBuy;
+
+            if (source.source === 'merchant') {
+                itemToBuy = merchant.inventory.find(i => i.id === source.itemId);
+                if (itemToBuy) engine.handleBuy(itemToBuy);
+            } else { // 'buyback'
+                itemToBuy = merchant.buyBack.find(i => i.id === source.itemId);
+                if (itemToBuy) engine.handleBuyBack(itemToBuy);
+            }
+            return; // Die Engine kümmert sich um das State-Update.
+        }
+       
+        // --- INVENTAR & AUSRÜSTUNG LOGIK ---
+        
         let sourceItem = null;
         if (source.source === 'inventory') {
             sourceItem = player.inventory[source.index];
@@ -14,7 +63,6 @@ export class InventorySystem {
             sourceItem = player.equipment[source.slot];
         }
 
-        // Hole das Item vom Ziel (kann auch 'undefined' sein)
         let targetItem = null;
         if (target.type === 'inventory') {
             targetItem = player.inventory[target.index];
@@ -22,32 +70,26 @@ export class InventorySystem {
             targetItem = player.equipment[target.slot];
         }
 
-        // Validierung: Passt das gezogene Item an den Zielort?
         if (sourceItem && target.type === 'equipment' && !target.slot.startsWith(sourceItem.type)) {
             return { player, log: [] };
         }
-        // Validierung: Passt das Ziel-Item (falls vorhanden) an den Ursprungsort?
         if (targetItem && source.source === 'equipment' && !source.slot.startsWith(targetItem.type)) {
             return { player, log: [] };
         }
 
-        // --- Führe den Tausch (Swap) durch ---
-        // Setze das Ziel-Item an den Quellort
         if (source.source === 'inventory') {
             player.inventory[source.index] = targetItem;
         } else {
             player.equipment[source.slot] = targetItem;
         }
 
-        // Setze das Quell-Item an den Zielort
         if (target.type === 'inventory') {
-            // Wenn der Ziel-Index nicht definiert ist (Drop auf leeren Bereich), finde den ersten leeren Platz
             if (target.index === undefined || target.index === null) {
                 const emptyIndex = player.inventory.findIndex(i => i === undefined || i === null);
                 if (emptyIndex !== -1) {
                     player.inventory[emptyIndex] = sourceItem;
                 } else {
-                    player.inventory.push(sourceItem); // Wenn kein Platz, ans Ende
+                    player.inventory.push(sourceItem);
                 }
             } else {
                  player.inventory[target.index] = sourceItem;
@@ -56,16 +98,15 @@ export class InventorySystem {
             player.equipment[target.slot] = sourceItem;
         }
         
-        // Werte neu berechnen, falls sich die Ausrüstung geändert hat
         if (source.source === 'equipment' || target.type === 'equipment') {
-            player = this.recalculateStats(player);
+            player = CharacterSystem.recalculateStats(player);
         }
         
         return { player, log: [] };
     }
 
     /**
-     * Berechnet die Gesamtwerte des Spielers neu.
+     * Berechnet die Gesamtwerte des Spielers neu. (Unverändert)
      */
     static recalculateStats(player) {
         const classData = CLASSES[player.classId];

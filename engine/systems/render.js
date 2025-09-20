@@ -122,20 +122,31 @@ export class RenderSystem {
   }
 
   attachDragDropListeners(container) {
+    // DRAG START: Wenn ein Item angehoben wird
     container.addEventListener("dragstart", (e) => {
       if (e.target.tagName === "IMG") {
         window.gameEngine.tooltipSystem.hideTooltip();
+
         const source = e.target.dataset.source;
-        const data = { source };
+        const data = { source }; // z.B. { source: 'inventory' } oder { source: 'merchant' }
+
+        // Daten je nach Quelle hinzufügen
         if (source === "inventory") data.index = e.target.dataset.index;
         else if (source === "equipment") data.slot = e.target.dataset.slot;
+        else if (source === "merchant" || source === "buyback")
+          data.itemId = e.target.dataset.itemId;
+
         e.dataTransfer.setData("application/json", JSON.stringify(data));
         setTimeout(() => (e.target.style.opacity = "0.5"), 0);
       }
     });
+
+    // DRAG END: Wenn das Item losgelassen wird (egal wo)
     container.addEventListener("dragend", (e) => {
       if (e.target.tagName === "IMG") e.target.style.opacity = "1";
     });
+
+    // DRAG OVER: Wenn ein Item über einem gültigen Ziel schwebt
     container.addEventListener("dragover", (e) => {
       const targetSlot = e.target.closest(".drop-target");
       if (targetSlot) {
@@ -143,25 +154,34 @@ export class RenderSystem {
         targetSlot.classList.add("drag-over");
       }
     });
+
+    // DRAG LEAVE: Wenn das Item das Ziel verlässt
     container.addEventListener("dragleave", (e) => {
       const targetSlot = e.target.closest(".drop-target");
       if (targetSlot) targetSlot.classList.remove("drag-over");
     });
+
+    // DROP: Das Item wird auf einem Ziel fallengelassen
     container.addEventListener("drop", (e) => {
       e.preventDefault();
       const targetSlot = e.target.closest(".drop-target");
       if (targetSlot) {
         targetSlot.classList.remove("drag-over");
+
         const sourceData = JSON.parse(
           e.dataTransfer.getData("application/json")
         );
+
+        // Zieldaten basierend auf dem Ziel-Slot erstellen
         const targetData = {
-          type: targetSlot.classList.contains("equipment-slot")
-            ? "equipment"
-            : "inventory",
-          slot: targetSlot.dataset.slot,
-          index: targetSlot.dataset.index,
+          type: targetSlot.dataset.targetType, // z.B. 'inventory', 'equipment', oder 'shop'
         };
+        if (targetData.type === "equipment")
+          targetData.slot = targetSlot.dataset.slot;
+        if (targetData.type === "inventory")
+          targetData.index = targetSlot.dataset.index;
+
+        // Das Event mit den neuen Daten auslösen, das dann von der inventory.js behandelt wird
         eventBus.publish("inventory:itemMoved", {
           source: sourceData,
           target: targetData,
@@ -421,99 +441,99 @@ export class RenderSystem {
 
   // FÜGE DIESE NEUE FUNKTION hinzu
   renderTradeWindow(state) {
-        // Wir aktualisieren das Fenster bei jeder Änderung, anstatt es nur einmal zu erstellen
-        const existingWindow = document.getElementById('trade-window');
-        if (existingWindow) existingWindow.remove();
+    const existingWindow = document.getElementById("trade-window");
+    if (existingWindow) existingWindow.remove();
 
-        const { player, activeTradeSession } = state;
-        const merchant = activeTradeSession.merchant;
+    const { player, activeTradeSession } = state;
+    const merchant = activeTradeSession.merchant;
 
-        const tradeEl = document.createElement('div');
-        tradeEl.id = 'trade-window';
-        tradeEl.className = 'window active';
-        tradeEl.style.width = '90%';
-        tradeEl.style.maxWidth = '1400px'; // Etwas mehr Platz für das 3-Spalten-Layout
-        tradeEl.style.height = '80%';
-        tradeEl.style.position = 'fixed';
-        tradeEl.style.top = '10%';
-        tradeEl.style.left = '50%';
-        tradeEl.style.transform = 'translateX(-50%)';
-        tradeEl.style.zIndex = '99';
+    const tradeEl = document.createElement("div");
+    tradeEl.id = "trade-window";
+    tradeEl.className = "window active";
+    tradeEl.style.width = "90%";
+    tradeEl.style.maxWidth = "1400px";
+    tradeEl.style.height = "80%";
+    tradeEl.style.position = "fixed";
+    tradeEl.style.top = "10%";
+    tradeEl.style.left = "50%";
+    tradeEl.style.transform = "translateX(-50%)";
+    tradeEl.style.zIndex = "99";
 
-        // Helper-Funktion zum Erstellen eines Grids
-        const renderInventoryGrid = (items, source, size = 30) => { // 5 Spalten * 6 Reihen = 30 Slots
-            let html = '';
-            for(let i = 0; i < size; i++) {
-                const item = items[i];
-                if (item) {
-                    html += `<div class="inventory-slot" data-source="${source}" data-index="${i}" data-tooltip-id="${item.id}"><img src="${item.icon}" alt="${item.name}"></div>`;
-                } else {
-                    html += `<div class="inventory-slot"></div>`;
-                }
-            }
-            return html;
-        };
+    // Helper-Funktion zum Erstellen eines Grids
+    const renderInventoryGrid = (items, source, targetType, size = 30) => {
+      let html = "";
+      for (let i = 0; i < size; i++) {
+        const item = items[i];
+        // WICHTIG: Jeder Slot ist jetzt ein Drop-Ziel
+        html += `<div class="inventory-slot drop-target" data-target-type="${targetType}" data-index="${i}">`;
+        if (item) {
+          // Die IMG-Tags bekommen jetzt die Drag-and-Drop-Daten
+          html += `<img src="${item.icon}" alt="${item.name}" data-tooltip-id="${item.id}" draggable="true" data-source="${source}" data-item-id="${item.id}" data-index="${i}">`;
+        }
+        html += `</div>`;
+      }
+      return html;
+    };
 
-        const playerInventoryHtml = renderInventoryGrid(player.inventory, 'player');
-        const merchantInventoryHtml = renderInventoryGrid(merchant.inventory, 'merchant');
-        const buyBackHtml = renderInventoryGrid(merchant.buyBack, 'buyback', 10); // Kleinere Grid-Größe für Rückkauf
+    // Wir übergeben jetzt auch den 'targetType'
+    const playerInventoryHtml = renderInventoryGrid(
+      player.inventory,
+      "inventory",
+      "inventory"
+    );
+    const merchantInventoryHtml = renderInventoryGrid(
+      merchant.inventory,
+      "merchant",
+      "shop"
+    );
+    const buyBackHtml = renderInventoryGrid(
+      merchant.buyBack,
+      "buyback",
+      "shop",
+      10
+    );
 
-        tradeEl.innerHTML = `
-            <div class="window-header"><span>Handel mit ${merchant.name}</span><button class="window-close-btn" id="close-trade-btn">×</button></div>
-            <div class="window-content trade-content">
-                <div class="trade-panel">
-                    <div class="trade-character">
-                        <img src="${merchant.sprite}" alt="${merchant.name}">
-                        <p>${merchant.name}</p>
-                        <p>Gold: ${merchant.gold}</p>
-                    </div>
-                    <h4>Angebot</h4>
-                    <div class="inventory-grid trade-grid" id="merchant-trade-grid">${merchantInventoryHtml}</div>
+    tradeEl.innerHTML = `
+        <div class="window-header"><span>Handel mit ${merchant.name}</span><button class="window-close-btn" id="close-trade-btn">×</button></div>
+        <div class="window-content trade-content">
+            <div class="trade-panel drop-target" data-target-type="shop">
+                <div class="trade-character">
+                    <img src="${merchant.sprite}" alt="${merchant.name}">
+                    <p>${merchant.name}</p>
+                    <p>Gold: ${merchant.gold}</p>
                 </div>
-
-                <div class="trade-panel">
-                    <div class="trade-character">
-                        <img src="assets/images/portraits/player.webp" alt="Spieler">
-                        <p>${player.name}</p>
-                        <p>Dein Gold: ${player.gold}</p>
-                    </div>
-                    <h4>Dein Inventar</h4>
-                    <div class="inventory-grid trade-grid" id="player-trade-grid">${playerInventoryHtml}</div>
-                </div>
-
-                <div class="trade-panel buyback-panel">
-                    <div class="trade-character">
-                         <h4>Rückkauf</h4>
-                         <p style="font-size: 0.8em;">(Zum Verkaufspreis)</p>
-                    </div>
-                    <div class="inventory-grid trade-grid" id="buyback-grid">${buyBackHtml}</div>
-                </div>
+                <h4>Angebot</h4>
+                <div class="inventory-grid trade-grid">${merchantInventoryHtml}</div>
             </div>
-        `;
-        
-        document.body.appendChild(tradeEl);
 
-        document.getElementById('close-trade-btn').addEventListener('click', () => eventBus.publish('ui:close_trade'));
-        
-        tradeEl.addEventListener('click', (e) => {
-            const slot = e.target.closest('.inventory-slot');
-            if (!slot || !slot.dataset.tooltipId) return;
+            <div class="trade-panel drop-target" data-target-type="inventory">
+                <div class="trade-character">
+                    <img src="assets/images/portraits/player.webp" alt="Spieler">
+                    <p>${player.name}</p>
+                    <p>Dein Gold: ${player.gold}</p>
+                </div>
+                <h4>Dein Inventar</h4>
+                <div class="inventory-grid trade-grid">${playerInventoryHtml}</div>
+            </div>
 
-            const source = slot.dataset.source;
-            const index = parseInt(slot.dataset.index, 10);
+            <div class="trade-panel buyback-panel drop-target" data-target-type="shop">
+                <div class="trade-character">
+                     <h4>Rückkauf</h4>
+                     <p style="font-size: 0.8em;">(Zum Verkaufspreis)</p>
+                </div>
+                <div class="inventory-grid trade-grid">${buyBackHtml}</div>
+            </div>
+        </div>
+    `;
 
-            if (source === 'player') {
-                const item = player.inventory[index];
-                if(item) eventBus.publish('trade:sell', { item, index });
-            } else if (source === 'merchant') {
-                const item = merchant.inventory[index];
-                if(item) eventBus.publish('trade:buy', item);
-            } else if (source === 'buyback') {
-                const item = merchant.buyBack[index];
-                if(item) eventBus.publish('trade:buy_back', item);
-            }
-        });
-    }
+    document.body.appendChild(tradeEl);
+
+    this.attachDragDropListeners(tradeEl);
+
+    document
+      .getElementById("close-trade-btn")
+      .addEventListener("click", () => eventBus.publish("ui:close_trade"));
+  }
 
   renderMapView(state) {
     if (window.gameEngine && window.gameEngine.mapRenderer) {

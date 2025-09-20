@@ -27,6 +27,7 @@ class GameEngine {
     this.mapRenderer = new MapRenderer();
     this.movementSystem = new MovementSystem();
     this.worldInteractionSystem = new WorldInteractionSystem();
+    this.tradingSystem = new TradingSystem();
 
     this.lastTime = 0;
     this.gameLoop = this.gameLoop.bind(this);
@@ -267,22 +268,105 @@ class GameEngine {
     }
   }
 
-  handleSell(data) {
+  // in /engine/core/engine.js
+
+  // in /engine/core/engine.js
+
+  // Ersetzen Sie die handleSell Methode in engine.js mit dieser korrigierten Version:
+
+handleSell(data) {
     const state = this.stateManager.getState();
-    const result = TradingSystem.playerSellsItem(
-      state.player,
-      state.activeTradeSession.merchant,
-      data.item,
-      data.index
-    );
-    if (result.success) {
-      this.stateManager.setState({
-        ...state,
-        player: result.player,
-        activeTradeSession: { merchant: result.merchant },
-      });
+    const player = state.player;
+    const merchant = state.activeTradeSession?.merchant;
+    const item = data.item;
+
+    if (!item || !player || !merchant) {
+        console.error('Verkauf fehlgeschlagen: Item, Player oder Merchant fehlt', { item, player: !!player, merchant: !!merchant });
+        return;
     }
-  }
+
+    const sellPrice = Math.floor(item.value * 0.5);
+
+    // Prüfen ob der Händler genug Gold hat
+    if (merchant.gold < sellPrice) {
+        console.log('Händler hat nicht genug Gold für diesen Verkauf');
+        return;
+    }
+
+    // 1. Erstelle eine saubere Kopie des Spieler-Objekts für die Änderungen
+    let updatedPlayer = JSON.parse(JSON.stringify(player));
+    
+    // Item aus dem Inventar oder der Ausrüstung des Spielers entfernen
+    if (data.source === 'inventory' && data.index !== undefined) {
+        if (updatedPlayer.inventory[data.index]) {
+            updatedPlayer.inventory[data.index] = null;
+        }
+    } else if (data.source === 'equipment' && data.slot !== undefined) {
+        if (updatedPlayer.equipment[data.slot]) {
+            updatedPlayer.equipment[data.slot] = null;
+            // Stats neu berechnen, da Ausrüstung entfernt wurde
+            updatedPlayer = CharacterSystem.recalculateStats(updatedPlayer);
+        }
+    }
+    
+    // Gold des Spielers anpassen
+    updatedPlayer.gold = (updatedPlayer.gold || 0) + sellPrice;
+    
+    // 2. Erstelle eine saubere Kopie des Händler-Objekts für die Änderungen
+    const updatedMerchant = JSON.parse(JSON.stringify(merchant));
+    
+    // Gold des Händlers anpassen
+    updatedMerchant.gold = (updatedMerchant.gold || 0) - sellPrice;
+    
+    // Stelle sicher, dass inventory und buyBack Arrays existieren
+    if (!updatedMerchant.inventory) {
+        updatedMerchant.inventory = [];
+    }
+    if (!updatedMerchant.buyBack) {
+        updatedMerchant.buyBack = [];
+    }
+
+    // Item zum Händler-Inventar hinzufügen
+    const merchantItem = {
+        ...item,
+        merchantId: Date.now() + Math.random() // Eindeutige ID für Händler-Inventar
+    };
+    updatedMerchant.inventory.push(merchantItem);
+
+    // Item zur Rückkauf-Liste hinzufügen und auf 10 begrenzen
+    // Erstelle eine Kopie des Items mit einer eindeutigen ID für buyBack
+    const buyBackItem = {
+        ...item,
+        buyBackId: Date.now() + Math.random() // Eindeutige ID für buyBack
+    };
+    
+    updatedMerchant.buyBack.unshift(buyBackItem);
+    if (updatedMerchant.buyBack.length > 10) {
+        updatedMerchant.buyBack = updatedMerchant.buyBack.slice(0, 10);
+    }
+
+    // 3. Aktualisiere den State mit den neuen, vollständigen Objekten
+    const newState = {
+        ...state,
+        player: updatedPlayer,
+        activeTradeSession: {
+            ...state.activeTradeSession,
+            merchant: updatedMerchant,
+        },
+        log: [...state.log, `Du hast ${item.name} für ${sellPrice} Gold verkauft.`]
+    };
+
+    this.stateManager.setState(newState);
+    
+    console.log('Verkauf erfolgreich:', {
+        item: item.name,
+        price: sellPrice,
+        playerGold: updatedPlayer.gold,
+        merchantGold: updatedMerchant.gold,
+        merchantInventoryItems: updatedMerchant.inventory.length,
+        buyBackItems: updatedMerchant.buyBack.length
+    });
+}
 
   handleBuyBack(item) {
     const state = this.stateManager.getState();
@@ -461,13 +545,14 @@ class GameEngine {
   }
 
   handleItemMoved(data) {
-    const state = this.stateManager.getLiveState();
-    const { player } = InventorySystem.handleItemMove(
-      state.player,
-      data.source,
-      data.target
-    );
-    this.stateManager.updateState("player", player);
+    const player = this.stateManager.getState().player;
+    // Korrekter Aufruf: NUR der Spieler wird übergeben, die Engine holt sich die Funktion selbst.
+    const result = InventorySystem.handleItemMove(player, data.source, data.target);
+    
+    // Das Ergebnis von handleItemMove (ein aktualisiertes Spielerobjekt) wird verwendet, um den State zu aktualisieren
+    if (result && result.player) {
+      this.stateManager.updateState({ player: result.player, log: result.log });
+    }
   }
 
   saveGame() {
