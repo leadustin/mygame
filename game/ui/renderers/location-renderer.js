@@ -1,4 +1,4 @@
-import { eventBus } from '../../engine/core/state-manager.js';
+import { eventBus } from '../../../engine/core/state-manager.js'; // KORRIGIERT
 
 export class LocationRenderer {
     constructor(container) {
@@ -58,10 +58,14 @@ export class LocationRenderer {
             <button id="exit-location-btn" class="hud-button">Weltkarte</button>
         `;
 
-        document.getElementById("exit-location-btn").addEventListener("click", () => {
-            // Style zurücksetzen, wenn wir die Location verlassen
-            this.container.style.backgroundImage = "none";
-            eventBus.publish("ui:exitLocation");
-        });
+        // Event-Listener direkt nach dem Erstellen des Buttons hinzufügen
+        const exitButton = document.getElementById("exit-location-btn");
+        if (exitButton) {
+            exitButton.addEventListener("click", () => {
+                // Style zurücksetzen, wenn wir die Location verlassen
+                this.container.style.backgroundImage = "none";
+                eventBus.publish("ui:exitLocation");
+            });
+        }
     }
 }

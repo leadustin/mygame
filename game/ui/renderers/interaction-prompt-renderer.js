@@ -1,4 +1,4 @@
-import { eventBus } from '../../engine/core/state-manager.js';
+import { eventBus } from '../../../engine/core/state-manager.js';
 
 export class InteractionPromptRenderer {
     constructor() {

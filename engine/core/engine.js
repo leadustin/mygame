@@ -1,15 +1,14 @@
-import { StateManager, eventBus } from "./state-manager.js";
+import StateManager, { eventBus } from "./state-manager.js";
 import { ViewManager } from "../../game/ui/view-manager.js";
 import { CharacterSystem } from "../../game/characters/characters.js";
 import { MovementSystem } from "../gameplay/movement-system.js";
 import { CombatSystem } from "../gameplay/combat-system.js";
 import { SaveSystem } from "../systems/save.js";
-import { createCharacter } from "../../game/characters/character-creation.js";
+import { createCharacter } from "../../game/characters/character-creation.js"; // KORRIGIERT
 import { InventorySystem } from "../../game/systems/inventory.js";
 import { TooltipManager } from "../../game/ui/tooltip-manager.js";
 import { WorldInteractionSystem } from "../gameplay/world-interaction-system.js";
 import { TradingSystem } from "../gameplay/trading-system.js";
-// Importiere den alten map_renderer
 import { MapRenderer as OldMapRenderer } from "../systems/map-renderer.js";
 
 
@@ -24,19 +23,15 @@ export class GameEngine {
     this.tooltipManager = new TooltipManager();
     this.worldInteractionSystem = new WorldInteractionSystem();
     this.tradingSystem = new TradingSystem();
-
-    // NEUE ZEILE: Erstelle eine Instanz des alten Renderers für die Weltkarte
     this.mapRenderer = new OldMapRenderer(); 
 
     window.gameEngine = this;
   }
 
-  // ... der Rest der Datei bleibt unverändert ...
   init() {
     console.log("Engine initialisiert.");
     this.subscribeToEvents();
 
-    // Initialen Zustand setzen
     this.stateManager.setState({
       currentView: "title_screen",
       player: null,
@@ -49,7 +44,6 @@ export class GameEngine {
   }
 
   subscribeToEvents() {
-    // State-Änderungen an den ViewManager weiterleiten
     eventBus.subscribe("state:updated", (state) =>
       this.viewManager.render(state)
     );
@@ -73,7 +67,6 @@ export class GameEngine {
     eventBus.subscribe("ui:close_dialogue", () => this.closeDialogue());
     eventBus.subscribe("ui:start_trade", (merchantData) => this.tradingSystem.startTrade(merchantData));
     eventBus.subscribe("ui:close_trade", () => this.tradingSystem.endTrade());
-
 
     // Game Events
     eventBus.subscribe("game:save", () => this.saveGame());
@@ -178,6 +171,5 @@ export class GameEngine {
   }
 }
 
-// Singleton-Instanz der GameEngine erstellen und initialisieren
 const gameEngine = new GameEngine();
 gameEngine.init();

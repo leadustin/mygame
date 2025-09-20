@@ -1,8 +1,8 @@
-import { Draggable } from '../../engine/ui-helpers/draggable.js';
-import { eventBus } from '../../engine/core/state-manager.js';
-import { RACES } from '../../game/characters/races.js';
-import { CLASSES } from '../../game/characters/classes.js';
-import { CharacterSystem } from '../../game/characters/characters.js';
+import { Draggable } from '../../../engine/ui-helpers/draggable.js';
+import { eventBus } from '../../../engine/core/state-manager.js';
+import { RACES } from '../../characters/races.js';
+import { CLASSES } from '../../characters/classes.js';
+import { CharacterSystem } from '../../characters/characters.js';
 
 export class CharacterWindowRenderer {
     constructor() {
@@ -16,7 +16,6 @@ export class CharacterWindowRenderer {
         const player = state.player;
         if (!player) return null;
         
-        // Temporären Status für Attributsänderungen initialisieren
         this.originalStats = JSON.parse(JSON.stringify(player.stats));
         this.tempStats = JSON.parse(JSON.stringify(player.stats));
         this.tempUnspentPoints = player.unspentStatPoints;
@@ -33,9 +32,9 @@ export class CharacterWindowRenderer {
         windowEl.appendChild(content);
 
         this.updateStatsDisplay(windowEl, player);
-        this.renderEquipment(windowEl, player);
-        this.attachEventListeners(windowEl, player);
+        this.renderEquipmentAndInventory(windowEl, player);
         
+        this.attachEventListeners(windowEl, player);
         new Draggable(windowEl);
         return windowEl;
     }
@@ -81,8 +80,47 @@ export class CharacterWindowRenderer {
             <h4>Primärattribute</h4>${primaryStatsHtml}<hr><h4>Kampfwerte</h4>${secondaryStatsHtml}${confirmButton}`;
     }
 
-    renderEquipment(windowEl, player) {
-        // Code für `renderCharacterWindow` (Ausrüstungsteil) hier einfügen
+    renderEquipmentAndInventory(windowEl, player) {
+        const equipmentPanel = windowEl.querySelector('#character-equipment-panel');
+        const inventoryPanel = windowEl.querySelector('#character-filtered-inventory-panel');
+        if (!equipmentPanel || !inventoryPanel) return;
+
+        const equipmentSlots = [
+            "head", "cloak", "armor", "amulet", "hand", "belt", "foot",
+            "artifact", "ring1", "ring2", "weapon", "offhand", "ranged",
+        ];
+        
+        let armorHtml = "";
+        let weaponHtml = "";
+        equipmentSlots.forEach((slotName) => {
+            const item = player.equipment[slotName];
+            let slotContent = `<span class="slot-name">${slotName.replace(/\d/g, "")}</span>`;
+            if (item) {
+                slotContent = `<img src="${item.icon}" alt="${item.name}" data-tooltip-id="${item.id}" draggable="true" data-source="equipment" data-slot="${slotName}">`;
+            }
+            const slotHtml = `<div class="equipment-slot drop-target" data-slot="${slotName}">${slotContent}</div>`;
+            if (["weapon", "offhand", "ranged"].includes(slotName)) {
+                weaponHtml += slotHtml;
+            } else {
+                armorHtml += slotHtml;
+            }
+        });
+        equipmentPanel.innerHTML = `<div class="equipment-group">${armorHtml}</div><div class="equipment-group weapons">${weaponHtml}</div>`;
+
+        const equippableItems = player.inventory.filter(
+            (item) => item && equipmentSlots.some((slot) => slot.startsWith(item.type))
+        );
+        let filteredInventoryHtml = "";
+        for (let i = 0; i < 20; i++) {
+            const item = equippableItems[i];
+            if (item) {
+                const originalIndex = player.inventory.indexOf(item);
+                filteredInventoryHtml += `<div class="inventory-slot drop-target" data-index="${originalIndex}"><img src="${item.icon}" alt="${item.name}" data-tooltip-id="${item.id}" draggable="true" data-source="inventory" data-index="${originalIndex}"></div>`;
+            } else {
+                filteredInventoryHtml += `<div class="inventory-slot drop-target"></div>`;
+            }
+        }
+        inventoryPanel.innerHTML = `<h4>Ausrüstbare Items</h4><div id="filtered-inventory-grid">${filteredInventoryHtml}</div>`;
     }
     
     attachEventListeners(windowEl, player) {
@@ -107,8 +145,5 @@ export class CharacterWindowRenderer {
                 });
             }
         });
-        
-        // Drag & Drop Listener
-        // this.attachDragDropListeners(windowEl.querySelector('.window-content'));
     }
 }

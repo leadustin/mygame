@@ -1,4 +1,4 @@
-import { Draggable } from '../../engine/ui-helpers/draggable.js';
+import { Draggable } from '../../../engine/ui-helpers/draggable.js'; // KORRIGIERT
 
 export class LogRenderer {
     constructor() {

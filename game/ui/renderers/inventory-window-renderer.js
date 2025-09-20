@@ -1,5 +1,5 @@
-import { Draggable } from '../../engine/ui-helpers/draggable.js';
-import { eventBus } from '../../engine/core/state-manager.js';
+import { Draggable } from '../../../engine/ui-helpers/draggable.js'; // KORRIGIERT
+import { eventBus } from '../../../engine/core/state-manager.js'; // KORRIGIERT
 
 export class InventoryWindowRenderer {
     constructor() {
@@ -41,7 +41,7 @@ export class InventoryWindowRenderer {
 
     attachEventListeners(windowEl) {
         windowEl.querySelector(".window-close-btn").addEventListener("click", (e) => eventBus.publish("ui:closeWindow", e.target.dataset.window));
-        // Drag & Drop Listener
-        // this.attachDragDropListeners(windowEl.querySelector('#inventory-grid'));
+        
+        // Zukünftige Drag & Drop Listener können hier hinzugefügt werden.
     }
 }

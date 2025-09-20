@@ -20,7 +20,7 @@ const ALL_ITEMS = {
     ...MATERIALS // NEU
 };
 
-export class TooltipSystem {
+export class TooltipManager {
     constructor() {
         this.tooltipEl = null;
         this.createTooltipElement();

@@ -1,5 +1,5 @@
-import { eventBus } from '../../engine/core/state-manager.js';
-import { SPELLS } from '../../data/items/spells.js';
+import { eventBus } from '../../../engine/core/state-manager.js'; // KORRIGIERT
+import { SPELLS } from '../../../data/items/spells.js'; // KORRIGIERT
 
 export class CombatRenderer {
     constructor(container) {
@@ -31,7 +31,7 @@ export class CombatRenderer {
         const usablePotions = player.inventory.filter(item => item && item.type === 'potion');
         const knownSpells = player.spellbook
             .map(spellId => Object.values(SPELLS).find(s => s.id === spellId))
-            .filter(Boolean); // filter(Boolean) removes null/undefined entries
+            .filter(Boolean);
 
         const spellBtn = this.container.querySelector('#spell-btn');
         const itemBtn = this.container.querySelector('#item-btn');
@@ -69,7 +69,6 @@ export class CombatRenderer {
                 .join("");
         });
 
-        // Event listener for the dynamically created buttons
         this.container.addEventListener('click', (e) => {
             if (e.target.matches('.spell-choice-btn')) {
                 eventBus.publish("combat:action", {

@@ -1,18 +1,18 @@
-import { eventBus } from '../../engine/core/state-manager.js';
-import { RACES } from '../characters/races.js';
-import { CLASSES } from '../characters/classes.js';
-import { WEAPONS } from '../../../data/items/weapons.js';
-import { ARMOR } from '../../../data/items/armor.js';
-import { POTIONS } from '../../../data/items/potions.js';
-import { CLOAKS } from '../../../data/items/cloaks.js';
-import { BELTS } from '../../../data/items/belts.js';
-import { JEWELRY } from '../../../data/items/jewelry.js';
-import { HANDS } from '../../../data/items/hands.js';
-import { FEET } from '../../../data/items/feet.js';
-import { ARTIFACTS } from '../../../data/items/artifacts.js';
-import { SHIELDS } from '../../../data/items/shields.js';
-import { MATERIALS } from '../../../data/items/materials.js';
-import { SPELLS } from '../../../data/items/spells.js';
+import { eventBus } from '../../../engine/core/state-manager.js'; // KORRIGIERT
+import { RACES } from '../../characters/races.js'; // KORRIGIERT
+import { CLASSES } from '../../characters/classes.js'; // KORRIGIERT
+import { WEAPONS } from '../../../data/items/weapons.js'; // KORRIGIERT
+import { ARMOR } from '../../../data/items/armor.js'; // KORRIGIERT
+import { POTIONS } from '../../../data/items/potions.js'; // KORRIGIERT
+import { CLOAKS } from '../../../data/items/cloaks.js'; // KORRIGIERT
+import { BELTS } from '../../../data/items/belts.js'; // KORRIGIERT
+import { JEWELRY } from '../../../data/items/jewelry.js'; // KORRIGIERT
+import { HANDS } from '../../../data/items/hands.js'; // KORRIGIERT
+import { FEET } from '../../../data/items/feet.js'; // KORRIGIERT
+import { ARTIFACTS } from '../../../data/items/artifacts.js'; // KORRIGIERT
+import { SHIELDS } from '../../../data/items/shields.js'; // KORRIGIERT
+import { MATERIALS } from '../../../data/items/materials.js'; // KORRIGIERT
+import { SPELLS } from '../../../data/items/spells.js'; // KORRIGIERT
 
 const ALL_ITEMS = {
   ...WEAPONS, ...ARMOR, ...POTIONS, ...CLOAKS, ...BELTS, ...JEWELRY,
@@ -42,14 +42,12 @@ export class CharacterCreationRenderer {
             gender: "Männlich",
             name: "",
         };
-
         this.renderWizard();
     }
 
     renderWizard() {
         const content = this.template.content.cloneNode(true);
         this.container.replaceChildren(content);
-
         this.renderStepIndicator();
         this.renderContentPanel();
         this.renderNavButtons();
@@ -57,9 +55,9 @@ export class CharacterCreationRenderer {
 
     renderStepIndicator() {
         const el = this.container.querySelector("#cc-step-indicator");
-        el.innerHTML = this.steps.map((name, i) =>
-                `<div class="step ${this.currentStep === i + 1 ? "active" : ""}">${i + 1}. ${name}</div>`
-            ).join("");
+        el.innerHTML = this.steps
+            .map((name, i) => `<div class="step ${this.currentStep === i + 1 ? "active" : ""}">${i + 1}. ${name}</div>`)
+            .join("");
     }
 
     renderNavButtons() {
@@ -114,10 +112,12 @@ export class CharacterCreationRenderer {
         }
         let equipHtml = "";
         if (details.startEquipment) {
-            const icons = Object.values(details.startEquipment).map((id) => {
+            const icons = Object.values(details.startEquipment)
+                .map((id) => {
                     const item = Object.values(ALL_ITEMS).find((i) => i.id === id);
                     return item ? `<img src="${item.icon}" alt="${item.name}" data-tooltip-id="${item.id}">` : "";
-                }).join("");
+                })
+                .join("");
             equipHtml = `<h4>Startausrüstung</h4><div class="cc-item-icons">${icons}</div>`;
         }
         container.innerHTML = `<div class="details-portrait"></div><h2>${details.name}</h2><p class="details-description">${details.description}</p><h4>${details.baseStats ? "Basisattribute" : "Boni"}</h4>${statsHtml}${equipHtml}`;
@@ -126,11 +126,11 @@ export class CharacterCreationRenderer {
     renderPersonalizationStep(container) {
         container.innerHTML = `<div id="cc-finalization-panel"><h2>Personalisierung</h2><div class="cc-gender-selection"><button class="selection-button ${this.creationData.gender === "Männlich" ? "active" : ""}" data-gender="Männlich">Männlich</button><button class="selection-button ${this.creationData.gender === "Weiblich" ? "active" : ""}" data-gender="Weiblich">Weiblich</button></div></div>`;
         container.querySelector(".cc-gender-selection").addEventListener("click", (e) => {
-                if (e.target.matches(".selection-button")) {
-                    this.creationData.gender = e.target.dataset.gender;
-                    this.renderPersonalizationStep(container);
-                }
-            });
+            if (e.target.matches(".selection-button")) {
+                this.creationData.gender = e.target.dataset.gender;
+                this.renderPersonalizationStep(container);
+            }
+        });
     }
 
     renderFinalizationStep(container) {

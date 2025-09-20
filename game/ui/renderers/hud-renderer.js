@@ -1,23 +1,19 @@
-import { eventBus } from '../../engine/core/state-manager.js';
+import { eventBus } from '../../../engine/core/state-manager.js'; // KORRIGIERT
 
 export class HudRenderer {
     constructor(container) {
-        this.container = container; // Das ist der #hud-container
+        this.container = container;
         this.template = document.getElementById('hud-template');
         this.listenerAttached = false;
     }
 
     render(state) {
-        // Das HUD wird nur in bestimmten Ansichten angezeigt
         const visibleViews = ['map', 'combat'];
         if (visibleViews.includes(state.currentView)) {
-            // Klonen des Templates und einfügen
             const content = this.template.content.cloneNode(true);
             this.container.replaceChildren(content);
             this.attachEventListeners();
         } else {
-            // In allen anderen Ansichten (außer 'location', das seinen eigenen HUD-Renderer hat)
-            // wird der HUD-Container geleert.
             this.container.innerHTML = '';
             this.listenerAttached = false;
         }

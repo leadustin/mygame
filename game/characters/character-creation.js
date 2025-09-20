@@ -70,3 +70,6 @@ export class CharacterCreator {
         return player;
     }
 }
+
+// Exportiere die Funktion auch direkt
+export const createCharacter = CharacterCreator.createCharacter;
