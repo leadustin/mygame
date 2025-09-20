@@ -9,9 +9,166 @@
   <body>
     <div id="game-container">
       <div id="main-view"></div>
-
       <div id="hud-container"></div>
     </div>
+
+    <template id="title-screen-template">
+      <div id="title-screen-container">
+        <h1>Mein RPG</h1>
+        <div id="title-menu">
+          <button id="new-game-btn">Neues Spiel</button>
+          <button id="load-game-btn">Spiel laden</button>
+          <button disabled>Optionen</button>
+        </div>
+      </div>
+    </template>
+
+    <template id="character-creation-template">
+      <div id="cc-wizard-container">
+        <div id="cc-step-indicator"></div>
+        <div id="cc-content-panel"></div>
+        <div id="cc-nav-buttons"></div>
+      </div>
+    </template>
+
+    <template id="game-over-template">
+        <h2 style="color:red;text-align:center;">GAME OVER</h2>
+    </template>
+
+    <template id="combat-view-template">
+        <div id="combat-screen" style="padding: 20px; text-align: center;">
+            <div class="monster-area" style="margin-bottom: 40px;">
+                <h2 id="monster-name"></h2>
+                <p>HP: <span id="monster-hp"></span> / <span id="monster-max-hp"></span></p>
+            </div>
+            <div class="player-area" style="margin-bottom: 40px;">
+                <h3 id="player-name"></h3>
+                <p>HP: <span id="player-hp"></span> / <span id="player-max-hp"></span></p>
+                <p>MP: <span id="player-mp"></span> / <span id="player-max-mp"></span></p>
+            </div>
+            <div class="actions" style="margin-bottom: 20px;">
+                <button id="attack-btn">Angriff</button>
+                <button id="spell-btn">Zauber</button>
+                <button id="item-btn">Item</button>
+            </div>
+            <div id="combat-submenu-container" style="min-height: 50px;"></div>
+        </div>
+    </template>
+
+    <template id="post-combat-loot-template">
+        <div id="loot-screen-container">
+            <div id="loot-panel">
+                <h2>SIEG!</h2>
+                <p>Du erhältst <span id="xp-gained"></span> Erfahrungspunkte.</p>
+                <div id="loot-gold">Gefunden: <span id="gold-gained"></span> Gold</div>
+                <h4>Beute</h4>
+                <div id="loot-list">
+                    </div>
+                <div id="loot-actions">
+                    <button id="take-selected-btn">Nehmen</button>
+                    <button id="dismantle-btn">Zerlegen</button>
+                    <button id="take-all-btn">Alles nehmen</button>
+                    <button id="close-loot-btn">Schließen</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="hud-template">
+        <button class="hud-button" data-action="toggleCharacter">Charakter</button>
+        <button class="hud-button" data-action="toggleInventory">Rucksack</button>
+        <button class="hud-button" data-action="toggleMap">Karte</button>
+        <button class="hud-button" data-action="save">Speichern</button>
+        <button class="hud-button" data-action="startTestCombat" style="border-color: red;">Testkampf</button>
+    </template>
+
+    <template id="character-window-template">
+        <div class="window-header">
+            <span>Charakter</span>
+            <button class="window-close-btn" data-window="character">×</button>
+        </div>
+        <div class="window-content">
+            <div id="character-stats-panel"></div>
+            <div id="character-equipment-panel"></div>
+            <div id="character-filtered-inventory-panel"></div>
+        </div>
+    </template>
+
+    <template id="inventory-window-template">
+        <div class="window-header">
+            <span>Rucksack</span>
+            <button class="window-close-btn" data-window="inventory">×</button>
+        </div>
+        <div class="window-content">
+            <div id="inventory-grid"></div>
+        </div>
+    </template>
+
+    <template id="dialogue-box-template">
+        <div class="window-header">
+            <span id="dialogue-speaker"></span>
+        </div>
+        <div class="window-content" style="padding: 20px; text-align: left;">
+            <p id="dialogue-text"></p>
+            <div id="dialogue-actions" class="dialogue-actions" style="margin-top: 20px; text-align: right;">
+                </div>
+        </div>
+    </template>
+
+    <template id="trade-window-template">
+        <div class="window-header">
+            <span>Handel mit <span id="merchant-name"></span></span>
+            <button class="window-close-btn" id="close-trade-btn">×</button>
+        </div>
+        <div class="window-content trade-content">
+            <div class="trade-panel drop-target" data-target-type="shop">
+                <div class="trade-character">
+                    <img id="merchant-sprite" src="" alt="">
+                    <p id="merchant-name-display"></p>
+                    <p>Gold: <span id="merchant-gold"></span></p>
+                </div>
+                <h4>Angebot</h4>
+                <div id="merchant-inventory" class="inventory-grid trade-grid"></div>
+            </div>
+
+            <div class="trade-panel drop-target" data-target-type="inventory">
+                <div class="trade-character">
+                    <img src="assets/images/portraits/player.webp" alt="Spieler">
+                    <p id="player-name-display"></p>
+                    <p>Dein Gold: <span id="player-gold"></span></p>
+                </div>
+                <h4>Dein Inventar</h4>
+                <div id="player-inventory" class="inventory-grid trade-grid"></div>
+            </div>
+
+            <div class="trade-panel buyback-panel drop-target" data-target-type="shop">
+                <div class="trade-character">
+                     <h4>Rückkauf</h4>
+                     <p style="font-size: 0.8em;">(Zum Verkaufspreis)</p>
+                </div>
+                <div id="buyback-inventory" class="inventory-grid trade-grid"></div>
+            </div>
+        </div>
+    </template>
+
+    <template id="interaction-prompt-template">
+        <div class="window-header">
+            <span>Ort erreicht</span>
+        </div>
+        <div class="window-content" style="padding: 20px; text-align: center;">
+            <h3 id="interaction-location-name"></h3>
+            <p>Möchtest du diesen Ort betreten?</p>
+            <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+                <button id="confirm-enter-btn">Betreten</button>
+                <button id="cancel-enter-btn">Weitergehen</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="log-window-template">
+        <div class="window-header">Log</div>
+        <div class="log-content"></div>
+    </template>
 
     <script type="module" src="engine/core/engine.js"></script>
   </body>

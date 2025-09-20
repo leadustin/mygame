@@ -1,8 +1,8 @@
-import { eventBus } from "../core/state_manager.js";
-import { Draggable } from "../ui_helpers/draggable.js";
-import { SaveSystem } from "./save.js";
-import { RACES } from "../../game/characters/races.js";
-import { CLASSES } from "../../game/characters/classes.js";
+import { eventBus } from "../../engine/core/state-manager.js";
+import { Draggable } from "../../engine/ui-helpers/draggable.js";
+import { SaveSystem } from "../../engine/systems/save.js";
+import { RACES } from "../characters/races.js";
+import { CLASSES } from "../characters/classes.js";
 import { WEAPONS } from "../../data/items/weapons.js";
 import { ARMOR } from "../../data/items/armor.js";
 import { POTIONS } from "../../data/items/potions.js";
@@ -14,7 +14,7 @@ import { FEET } from "../../data/items/feet.js"; // Angepasst an deinen Dateinam
 import { ARTIFACTS } from "../../data/items/artifacts.js";
 import { SHIELDS } from "../../data/items/shields.js";
 import { MATERIALS } from "../../data/items/materials.js";
-import { CharacterSystem } from "../../game/characters/characters.js";
+import { CharacterSystem } from "../characters/characters.js";
 import { SPELLS } from "../../data/items/spells.js";
 
 const ALL_ITEMS = {

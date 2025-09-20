@@ -1,4 +1,4 @@
-import { eventBus } from '../../engine/core/state_manager.js';
+import { eventBus } from '../../engine/core/state-manager.js';
 
 export class UIManager {
     constructor(stateManager) {

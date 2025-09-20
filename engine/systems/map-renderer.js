@@ -1,5 +1,5 @@
-import { eventBus } from '../core/state_manager.js';
-import { MAP_LOCATIONS } from '../../data/locations/map_locations.js';
+import { eventBus } from '../core/state-manager.js';
+import { MAP_LOCATIONS } from '../../data/locations/map-locations.js';
 
 /**
  * map_renderer.js

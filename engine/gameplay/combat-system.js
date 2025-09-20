@@ -1,4 +1,4 @@
-import { LOOT_TABLES } from '../../data/items/loot_tables.js';
+import { LOOT_TABLES } from '../../data/items/loot-tables.js';
 import { CharacterSystem } from '../../game/characters/characters.js';
 import { SPELLS } from '../../data/items/spells.js';
 import { POTIONS } from '../../data/items/potions.js';

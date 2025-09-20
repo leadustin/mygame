@@ -1,4 +1,4 @@
-import EventBus from './event_bus.js';
+import EventBus from './event-bus.js';
 
 // Erstelle eine einzige, globale Instanz, die im ganzen Spiel verwendet wird.
 const eventBus = new EventBus();

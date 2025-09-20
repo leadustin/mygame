@@ -1,7 +1,7 @@
 // in /engine/gameplay/world_interaction_system.js
 
-import { eventBus } from '../core/state_manager.js'; // KORREKTUR: Import von der richtigen Datei
-import { MAP_LOCATIONS } from '../../data/locations/map_locations.js';
+import { eventBus } from '../core/state-manager.js'; // KORREKTUR: Import von der richtigen Datei
+import { MAP_LOCATIONS } from '../../data/locations/map-locations.js';
 
 export class WorldInteractionSystem {
     constructor() {
