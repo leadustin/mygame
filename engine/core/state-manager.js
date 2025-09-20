@@ -47,6 +47,22 @@ class StateManager {
         this.eventBus.publish('state:updated', this.gameState);
         console.log(`State-Teil '${key}' wurde aktualisiert:`, value);
     }
+    /**
+     * Fügt eine Nachricht zum Spiel-Log hinzu.
+     * @param {string} message - Die Nachricht, die hinzugefügt werden soll.
+     */
+    addLog(message) {
+        // Hole das aktuelle Log-Array (oder ein leeres, falls es nicht existiert)
+        const currentLog = this.gameState.log || [];
+        
+        // Erstelle das neue Log-Array
+        const newLog = [...currentLog, message];
+        
+        // Aktualisiere nur den 'log'-Teil des Zustands
+        this.updateState('log', newLog); 
+        
+        console.log("Neue Log-Nachricht:", message);
+    }
 }
 
 export default StateManager;

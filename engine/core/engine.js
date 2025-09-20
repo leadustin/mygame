@@ -11,7 +11,6 @@ import { WorldInteractionSystem } from "../gameplay/world-interaction-system.js"
 import { TradingSystem } from "../gameplay/trading-system.js";
 import { MapRenderer as OldMapRenderer } from "../systems/map-renderer.js";
 
-
 export class GameEngine {
   constructor() {
     this.stateManager = new StateManager();
@@ -23,7 +22,7 @@ export class GameEngine {
     this.tooltipManager = new TooltipManager();
     this.worldInteractionSystem = new WorldInteractionSystem();
     this.tradingSystem = new TradingSystem();
-    this.mapRenderer = new OldMapRenderer(); 
+    this.mapRenderer = new OldMapRenderer();
 
     window.gameEngine = this;
   }
@@ -50,22 +49,30 @@ export class GameEngine {
 
     // UI Events
     eventBus.subscribe("ui:newGame", () =>
-      this.stateManager.setState({ currentView: "character_creation" })
+      this.stateManager.updateState("currentView", "character_creation")
     );
     eventBus.subscribe("ui:startGame", (characterData) =>
       this.startGame(characterData)
     );
-    eventBus.subscribe("ui:toggleCharacter", () => this.toggleWindow("character"));
-    eventBus.subscribe("ui:toggleInventory", () => this.toggleWindow("inventory"));
+    eventBus.subscribe("ui:toggleCharacter", () =>
+      this.toggleWindow("character")
+    );
+    eventBus.subscribe("ui:toggleInventory", () =>
+      this.toggleWindow("inventory")
+    );
     eventBus.subscribe("ui:closeWindow", (windowName) =>
       this.closeWindow(windowName)
     );
     eventBus.subscribe("ui:exitLocation", () => {
-        this.stateManager.setState({ currentView: "map" });
+      this.stateManager.updateState("currentView", "map");
     });
-    eventBus.subscribe("ui:show_dialogue", (npcData) => this.showDialogue(npcData));
+    eventBus.subscribe("ui:show_dialogue", (npcData) =>
+      this.showDialogue(npcData)
+    );
     eventBus.subscribe("ui:close_dialogue", () => this.closeDialogue());
-    eventBus.subscribe("ui:start_trade", (merchantData) => this.tradingSystem.startTrade(merchantData));
+    eventBus.subscribe("ui:start_trade", (merchantData) =>
+      this.tradingSystem.startTrade(merchantData)
+    );
     eventBus.subscribe("ui:close_trade", () => this.tradingSystem.endTrade());
 
     // Game Events
@@ -95,45 +102,74 @@ export class GameEngine {
     );
 
     // Combat Events
-    eventBus.subscribe("combat:action", (action) =>
-      this.combatSystem.handleAction(action)
-    );
+    eventBus.subscribe("combat:action", (action) => {
+      // 1. Hole den aktuellen Zustand
+      const currentState = this.stateManager.getState();
+
+      // 2. Führe die Kampfaktion aus und erhalte das Ergebnis
+      const result = this.combatSystem.performAction(currentState, action);
+
+      // 3. Aktualisiere den Spielzustand mit dem Ergebnis
+      if (result && result.updatedState) {
+        this.stateManager.setState(result.updatedState);
+
+        // 4. Füge die neuen Log-Einträge hinzu
+        if (result.log && result.log.length > 0) {
+          result.log.forEach((message) => {
+            this.stateManager.addLog(message);
+          });
+        }
+      }
+    });
 
     // Loot Events
-    eventBus.subscribe("loot:take_all", () => this.inventorySystem.takeAllLoot());
-    eventBus.subscribe("loot:take_selected", (ids) => this.inventorySystem.takeSelectedLoot(ids));
-    eventBus.subscribe("loot:dismantle", (ids) => this.inventorySystem.dismantleLoot(ids));
+    eventBus.subscribe("loot:take_all", () =>
+      this.inventorySystem.takeAllLoot()
+    );
+    eventBus.subscribe("loot:take_selected", (ids) =>
+      this.inventorySystem.takeSelectedLoot(ids)
+    );
+    eventBus.subscribe("loot:dismantle", (ids) =>
+      this.inventorySystem.dismantleLoot(ids)
+    );
     eventBus.subscribe("loot:close", () => this.inventorySystem.closeLoot());
 
     // Inventory Events
-    eventBus.subscribe("inventory:itemMoved", (moveData) => this.inventorySystem.handleItemMove(moveData));
+    eventBus.subscribe("inventory:itemMoved", (moveData) =>
+      this.inventorySystem.handleItemMove(moveData)
+    );
   }
 
   startGame(characterData) {
     const player = createCharacter(characterData);
+    const currentState = this.stateManager.getState(); // Hole den aktuellen Zustand
+
     this.stateManager.setState({
+      ...currentState, // Behalte alle alten Werte!
       player: player,
       currentView: "map",
-      log: [...this.stateManager.getState().log, `Willkommen, ${player.name}!`],
+      log: [...(currentState.log || []), `Willkommen, ${player.name}!`],
     });
   }
 
   toggleWindow(windowName) {
-    const activeWindows = [...this.stateManager.getState().activeWindows];
+    // Mache den Code sicherer, falls activeWindows mal nicht existiert
+    const currentWindows = this.stateManager.getState().activeWindows || [];
+    const activeWindows = [...currentWindows];
     const index = activeWindows.indexOf(windowName);
+
     if (index > -1) {
       activeWindows.splice(index, 1);
     } else {
       activeWindows.push(windowName);
     }
-    this.stateManager.setState({ activeWindows });
+    this.stateManager.updateState("activeWindows", activeWindows);
   }
 
   closeWindow(windowName) {
-    const activeWindows = this.stateManager
-      .getState()
-      .activeWindows.filter((w) => w !== windowName);
-    this.stateManager.setState({ activeWindows });
+    const currentWindows = this.stateManager.getState().activeWindows || [];
+    const activeWindows = currentWindows.filter((w) => w !== windowName);
+    this.stateManager.updateState("activeWindows", activeWindows);
   }
 
   saveGame() {
@@ -161,13 +197,13 @@ export class GameEngine {
       speaker: npcData.name,
       text: npcData.dialogue,
       isMerchant: npcData.isMerchant || false,
-      npcData: npcData
+      npcData: npcData,
     };
-    this.stateManager.setState({ activeDialogue: dialogue });
+    this.stateManager.updateState({ activeDialogue: dialogue });
   }
 
   closeDialogue() {
-    this.stateManager.setState({ activeDialogue: null });
+    this.stateManager.updateState({ activeDialogue: null });
   }
 }
 
